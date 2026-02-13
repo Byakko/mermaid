@@ -24,6 +24,7 @@ class TaskStatus(Enum):
     ACTIVE = "active"
     CRIT = "crit"
     MILESTONE = "milestone"
+    VERT = "vert"
 
 
 @dataclass
@@ -81,9 +82,11 @@ class GanttTask:
             parts.append(self.task_id)
 
         # Start date/duration
-        # If start is DateRange, add it
+        # If start is DateRange, add it (and duration if present)
         if isinstance(self.start, DateRange):
             parts.append(str(self.start))
+            if self.duration:
+                parts.append(self.duration)
         # If we have a duration, add start (if non-empty) and duration
         elif self.duration:
             if self.start:  # Add start only if non-empty
@@ -134,15 +137,25 @@ class GanttSection:
     name: str
     tasks: List[GanttTask] = field(default_factory=list)
     milestones: List[GanttMilestone] = field(default_factory=list)
+    # Ordered list of items (tasks, milestones, and comment strings) preserving
+    # original ordering so that ``%%`` comments survive round-tripping.
+    items: List[Union[GanttTask, GanttMilestone, str]] = field(default_factory=list)
 
     def add_task(self, task: GanttTask) -> 'GanttSection':
         """Add a task to the section."""
         self.tasks.append(task)
+        self.items.append(task)
         return self
 
     def add_milestone(self, milestone: GanttMilestone) -> 'GanttSection':
         """Add a milestone to the section."""
         self.milestones.append(milestone)
+        self.items.append(milestone)
+        return self
+
+    def add_comment(self, text: str) -> 'GanttSection':
+        """Add a comment line (including the ``%%`` prefix) to the section."""
+        self.items.append(text)
         return self
 
 
@@ -164,8 +177,8 @@ class GanttChart(Diagram):
 
     def __init__(
         self,
-        title: str = "Gantt Chart",
-        date_format: str = "YYYY-MM-DD",
+        title: Optional[str] = None,
+        date_format: Optional[str] = None,
         config: Optional[DiagramConfig] = None,
         directive: Optional[Directive] = None,
         line_ending: LineEnding = LineEnding.LF
@@ -183,15 +196,26 @@ class GanttChart(Diagram):
         self.title = title
         self.date_format = date_format
         self.sections: List[GanttSection] = []
+        # Tasks not belonging to any section
+        self.tasks: List[GanttTask] = []
+        # Comments in the directive/pre-section area
+        self.header_comments: List[str] = []
         # Axis formatting
         self.axis_format: Optional[str] = None  # e.g., "%Y-%m-%d"
         # Exclusions
         self.excludes: Optional[str] = None  # e.g., "weekends"
+        # Weekend override
+        self.weekend: Optional[str] = None  # e.g., "friday"
 
     @property
     def diagram_type(self) -> DiagramType:
         """Return the diagram type."""
         return DiagramType.GANTT
+
+    def add_task(self, task: GanttTask) -> 'GanttChart':
+        """Add a sectionless task to the chart."""
+        self.tasks.append(task)
+        return self
 
     def add_section(self, section: GanttSection) -> 'GanttChart':
         """Add a section to the chart."""
@@ -218,7 +242,7 @@ class GanttChart(Diagram):
         lines = []
 
         # Add config frontmatter if present
-        if self.config.to_dict():
+        if self.config.to_dict() or self.frontmatter:
             lines.append(self._render_config())
 
         # Add directive if present
@@ -229,10 +253,12 @@ class GanttChart(Diagram):
         lines.append(self.diagram_type.value)
 
         # Add title
-        lines.append(f"    title {self.title}")
+        if self.title:
+            lines.append(f"    title {self.title}")
 
         # Add date format
-        lines.append(f"    dateFormat {self.date_format}")
+        if self.date_format:
+            lines.append(f"    dateFormat {self.date_format}")
 
         # Add axis format if present
         if self.axis_format:
@@ -242,13 +268,26 @@ class GanttChart(Diagram):
         if self.excludes:
             lines.append(f"    excludes {self.excludes}")
 
+        # Add weekend override if present
+        if self.weekend:
+            lines.append(f"    weekend {self.weekend}")
+
+        # Add header comments (between directives and first section)
+        for comment in self.header_comments:
+            lines.append(f"    {comment}")
+
+        # Add sectionless tasks
+        for task in self.tasks:
+            lines.append(f"    {task.render()}")
+
         # Add sections
         for section in self.sections:
             lines.append(f"    section {section.name}")
-            for task in section.tasks:
-                lines.append(f"        {task.render()}")
-            for milestone in section.milestones:
-                lines.append(f"        {milestone.render()}")
+            for item in section.items:
+                if isinstance(item, str):
+                    lines.append(f"        {item}")
+                else:
+                    lines.append(f"        {item.render()}")
 
         return self._join_lines(lines)
 

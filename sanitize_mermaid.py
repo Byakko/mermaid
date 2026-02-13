@@ -9,8 +9,9 @@ then converts it back to text with consistent formatting and configurable line e
 import argparse
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union, List
+from typing import Any, Dict, Optional, Tuple, Union, List
 
 from mermaid.base import LineEnding
 from mermaid import (
@@ -95,6 +96,9 @@ def parse_arguments() -> argparse.Namespace:
 Examples:
   # Interactive mode (type/paste Mermaid text)
   python sanitize_mermaid.py
+
+  # Pipe from stdin
+  cat diagram.mmd | python sanitize_mermaid.py
 
   # Read from file, overwrite same file
   python sanitize_mermaid.py diagram.mmd
@@ -243,8 +247,10 @@ def get_input_text(args: argparse.Namespace) -> Optional[str]:
     Returns:
         Input text, or None if user cancelled
     """
-    # Mode 1: No file specified - interactive input
+    # Mode 1: No file specified - read from piped stdin or interactive input
     if args.input_file is None:
+        if not sys.stdin.isatty():
+            return sys.stdin.read()
         return read_interactive_input()
 
     input_path = Path(args.input_file)
@@ -321,6 +327,9 @@ def detect_diagram_type(text: str) -> str:
     Returns:
         Diagram type identifier (e.g., "flowchart", "sequence", "class")
     """
+    # Strip frontmatter before detection
+    _, text = extract_frontmatter(text)
+
     # Normalize text for detection
     lines = [line.strip() for line in text.strip().split("\n")]
     first_content_line = next((line for line in lines if line and not line.startswith("%%")), "")
@@ -365,6 +374,69 @@ def detect_diagram_type(text: str) -> str:
         return "sequence"
 
     return "unknown"
+
+
+# =============================================================================
+# Frontmatter Extraction
+# =============================================================================
+
+def extract_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
+    """
+    Extract YAML frontmatter from the beginning of Mermaid text.
+
+    Frontmatter is delimited by ``---`` lines at the start of the text.
+    Only simple ``key: value`` pairs are supported (no nested YAML).
+
+    Args:
+        text: Raw Mermaid diagram text
+
+    Returns:
+        Tuple of (frontmatter dict, remaining text with frontmatter stripped)
+    """
+    lines = text.split("\n")
+
+    # Find the first non-empty line
+    first_idx = None
+    for i, line in enumerate(lines):
+        if line.strip():
+            first_idx = i
+            break
+
+    if first_idx is None or lines[first_idx].strip() != "---":
+        return {}, text
+
+    # Look for closing ---
+    closing_idx = None
+    for i in range(first_idx + 1, len(lines)):
+        if lines[i].strip() == "---":
+            closing_idx = i
+            break
+
+    if closing_idx is None:
+        return {}, text
+
+    # Parse simple key: value pairs
+    frontmatter: Dict[str, Any] = {}
+    for line in lines[first_idx + 1 : closing_idx]:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        match = re.match(r'^(\w[\w-]*)\s*:\s*(.+)$', stripped)
+        if match:
+            key = match.group(1)
+            value = match.group(2).strip()
+            # Simple type coercion
+            if value.lower() in ("true", "false"):
+                frontmatter[key] = value.lower() == "true"
+            elif re.match(r'^-?\d+$', value):
+                frontmatter[key] = int(value)
+            elif re.match(r'^-?\d+\.\d+$', value):
+                frontmatter[key] = float(value)
+            else:
+                frontmatter[key] = value
+
+    remaining = "\n".join(lines[:first_idx] + lines[closing_idx + 1 :])
+    return frontmatter, remaining
 
 
 # =============================================================================
@@ -918,186 +990,361 @@ def parse_user_journey(text: str, line_ending: LineEnding) -> UserJourney:
 
 
 # =============================================================================
+# Reusable Parsing Primitives
+# =============================================================================
+
+def try_parse_directive(line: str, keyword: str) -> Optional[str]:
+    """
+    Match a directive line like 'keyword value' (case-insensitive).
+
+    Args:
+        line: Line to check
+        keyword: Directive keyword (e.g. "title", "dateFormat", "excludes")
+
+    Returns:
+        Captured value string, or None if no match
+    """
+    match = re.match(rf'{keyword}\s+(.+)', line, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def try_parse_section(line: str) -> Optional[str]:
+    """
+    Match a 'section SectionName' line (case-insensitive).
+
+    Returns:
+        Section name, or None if no match
+    """
+    match = re.match(r'section\s+(.+)', line, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def is_declaration(line: str, *keywords: str) -> bool:
+    """
+    Check if a line starts with any of the given keywords (case-insensitive).
+
+    Args:
+        line: Line to check
+        keywords: One or more keywords to match against
+
+    Returns:
+        True if the line starts with any keyword
+    """
+    line_lower = line.lower()
+    return any(line_lower.startswith(kw.lower()) for kw in keywords)
+
+
+# Mapping from day.js format tokens to Python strptime tokens
+_DAYJS_TO_STRPTIME = {
+    'YYYY': '%Y',
+    'YY': '%y',
+    'MMMM': '%B',
+    'MMM': '%b',
+    'MM': '%m',
+    'M': '%-m',
+    'DD': '%d',
+    'D': '%-d',
+    'HH': '%H',
+    'hh': '%I',
+    'mm': '%M',
+    'ss': '%S',
+    'SSS': '%f',
+    'A': '%p',
+    'a': '%p',
+}
+
+
+def dayjs_to_strptime(date_format: str) -> str:
+    """
+    Convert a day.js format string to a Python strptime format string.
+
+    Args:
+        date_format: day.js format string (e.g. "YYYY-MM-DD", "DD/MM/YYYY", "HH:mm")
+
+    Returns:
+        Python strptime format string (e.g. "%Y-%m-%d", "%d/%m/%Y", "%H:%M")
+    """
+    result = date_format
+    # Replace longest tokens first to avoid partial matches
+    for dayjs_token, strptime_token in _DAYJS_TO_STRPTIME.items():
+        result = result.replace(dayjs_token, strptime_token)
+    return result
+
+
+def is_date(s: str, strptime_format: Optional[str] = None) -> bool:
+    """
+    Check if a string matches a date format.
+
+    Args:
+        s: String to check
+        strptime_format: Python strptime format string. If None, falls back to
+                         matching YYYY-MM-DD pattern.
+    """
+    if strptime_format is not None:
+        try:
+            datetime.strptime(s, strptime_format)
+            return True
+        except ValueError:
+            return False
+    return re.match(r'^\d{4}-\d{2}-\d{2}$', s) is not None
+
+
+def is_duration(s: str) -> bool:
+    """Check if a string matches a duration pattern like 3d, 24h, 1w."""
+    return re.match(r'^\d+[dwmyh]?$', s.lower()) is not None
+
+
+def is_task_ref(s: str) -> bool:
+    """Check if a string is a task reference (after ... or until ...)."""
+    lower = s.lower()
+    return lower.startswith('after ') or lower.startswith('until ')
+
+
+# =============================================================================
 # Gantt Chart Parser
 # =============================================================================
 
-def parse_gantt(text: str, line_ending: LineEnding) -> GanttChart:
-    """Parse a Gantt chart."""
-    lines = preprocess_text(text)
+_GANTT_STATUS_KEYWORDS = {'done', 'active', 'crit', 'milestone', 'vert'}
 
+
+def _extract_gantt_task_statuses(parts: list) -> tuple:
+    """
+    First pass: extract status keywords from front of parts list.
+
+    Args:
+        parts: List of comma-separated task parts (after the colon)
+
+    Returns:
+        Tuple of (statuses list, index of first non-status part).
+        If all parts are statuses, index equals len(parts).
+    """
+    statuses = []
+    first_non_status = len(parts)
+    for i, part in enumerate(parts):
+        if not part:
+            continue
+        if part.lower() in _GANTT_STATUS_KEYWORDS:
+            statuses.append(part.lower())
+        else:
+            first_non_status = i
+            break
+    return statuses, first_non_status
+
+
+def _classify_gantt_task_part(
+    part: str, task_id: Optional[str], start_date: Optional[str],
+    end_date: Optional[str], duration: Optional[str], index: int,
+    strptime_format: Optional[str] = None
+) -> dict:
+    """
+    Classify a single comma-separated part as date/duration/task-ref/task-id.
+
+    Args:
+        part: The part string to classify
+        task_id: Current task_id (or None)
+        start_date: Current start_date (or None)
+        end_date: Current end_date (or None)
+        duration: Current duration (or None)
+        index: Position index in the parts list
+        strptime_format: Python strptime format for date matching
+
+    Returns:
+        Dict with updated values for task_id, start_date, end_date, duration.
+    """
+    result = {
+        'task_id': task_id,
+        'start_date': start_date,
+        'end_date': end_date,
+        'duration': duration,
+    }
+
+    if not part:
+        return result
+
+    part_lower = part.lower()
+
+    # Skip if it's a status keyword (already extracted)
+    if part_lower in _GANTT_STATUS_KEYWORDS:
+        return result
+
+    # Duration pattern (e.g., 3d, 24h, 1w)
+    if is_duration(part):
+        result['duration'] = part
+        return result
+
+    # Task reference (after/until)
+    if is_task_ref(part):
+        if part_lower.startswith('after '):
+            result['start_date'] = part_lower
+        else:
+            result['end_date'] = part_lower
+        return result
+
+    # Date/time value (checked against the diagram's dateFormat)
+    if is_date(part, strptime_format):
+        if result['start_date'] is None:
+            result['start_date'] = part
+        else:
+            result['end_date'] = part
+        return result
+
+    # If no task_id yet and early in the list, treat as task ID
+    if result['task_id'] is None and index < 4:
+        result['task_id'] = part
+        return result
+
+    # Unrecognized — treat as date/time value as a last resort
+    if result['start_date'] is None:
+        result['start_date'] = part
+    else:
+        result['end_date'] = part
+
+    return result
+
+
+def _resolve_gantt_start(
+    start_date: Optional[str], end_date: Optional[str], duration: Optional[str]
+) -> Union[str, DateRange]:
+    """
+    Determine the start value for a GanttTask from parsed components.
+
+    Returns:
+        A string, DateRange, or empty string.
+    """
+    if (end_date is not None and
+            start_date is not None and
+            not start_date.startswith('after ')):
+        return DateRange(start=start_date, end=end_date)
+
+    if end_date is not None and end_date.startswith('until '):
+        return end_date
+
+    if duration is not None and start_date is None:
+        return ""
+
+    if start_date is None:
+        return ""
+
+    return start_date
+
+
+def _parse_gantt_task_line(line: str, strptime_format: Optional[str] = None) -> Optional[GanttTask]:
+    """
+    Parse a full Gantt task line (must contain a colon).
+
+    Args:
+        line: A line like 'Task Name :done, des1, 2014-01-06, 2014-01-08'
+        strptime_format: Python strptime format for date matching
+
+    Returns:
+        A GanttTask, or None if the line isn't a valid task.
+    """
+    if ':' not in line:
+        return None
+
+    parts = line.split(':', 1)
+    if len(parts) != 2:
+        return None
+
+    task_name = parts[0].strip()
+    rest = parts[1].strip()
+    task_parts = [p.strip() for p in rest.split(',')]
+
+    # First pass: extract statuses
+    statuses, start_index = _extract_gantt_task_statuses(task_parts)
+
+    # Second pass: classify remaining parts
+    task_id = None
+    start_date = None
+    end_date = None
+    duration = None
+
+    for i in range(start_index, len(task_parts)):
+        result = _classify_gantt_task_part(
+            task_parts[i], task_id, start_date, end_date, duration, i,
+            strptime_format
+        )
+        task_id = result['task_id']
+        start_date = result['start_date']
+        end_date = result['end_date']
+        duration = result['duration']
+
+    # Resolve start value
+    start_value = _resolve_gantt_start(start_date, end_date, duration)
+
+    return GanttTask(
+        name=task_name,
+        start=start_value,
+        duration=duration,
+        statuses=statuses,
+        task_id=task_id,
+    )
+
+
+def parse_gantt(text: str, line_ending: LineEnding) -> GanttChart:
+    """Parse a Gantt chart using composable sub-functions."""
     diagram = GanttChart(line_ending=line_ending)
     current_section = None
+    strptime_format = None
 
-    for line in lines:
-        # Skip diagram declaration
-        if line.lower().startswith("gantt"):
+    for raw_line in text.split("\n"):
+        line = raw_line.strip()
+        if not line:
             continue
 
-        # Parse title
-        title_match = re.match(r'title\s+(.+)', line, re.IGNORECASE)
-        if title_match:
-            diagram.title = title_match.group(1)
+        # Preserve %% comment lines in their original position
+        if line.startswith("%%"):
+            if current_section:
+                current_section.add_comment(line)
+            else:
+                diagram.header_comments.append(line)
             continue
 
-        # Parse dateFormat
-        date_format_match = re.match(r'dateformat\s+(.+)', line, re.IGNORECASE)
-        if date_format_match:
-            diagram.date_format = date_format_match.group(1).strip()
+        if is_declaration(line, "gantt"):
             continue
 
-        # Parse excludes
-        excludes_match = re.match(r'excludes\s+(.+)', line, re.IGNORECASE)
-        if excludes_match:
-            diagram.set_excludes(excludes_match.group(1).strip())
+        title = try_parse_directive(line, "title")
+        if title is not None:
+            diagram.title = title
             continue
 
-        # Parse section
-        section_match = re.match(r'section\s+(.+)', line, re.IGNORECASE)
-        if section_match:
-            section_name = section_match.group(1).strip()
+        date_format = try_parse_directive(line, "dateformat")
+        if date_format is not None:
+            diagram.date_format = date_format
+            strptime_format = dayjs_to_strptime(date_format)
+            continue
+
+        axis_format = try_parse_directive(line, "axisformat")
+        if axis_format is not None:
+            diagram.axis_format = axis_format
+            continue
+
+        excludes = try_parse_directive(line, "excludes")
+        if excludes is not None:
+            diagram.set_excludes(excludes)
+            continue
+
+        weekend = try_parse_directive(line, "weekend")
+        if weekend is not None:
+            diagram.weekend = weekend
+            continue
+
+        section_name = try_parse_section(line)
+        if section_name is not None:
             current_section = GanttSection(name=section_name)
             diagram.add_section(current_section)
             continue
 
-        # Parse task - simplified version
-        # Format: task_name : [status,] [id,] start, duration
-        # Examples:
-        #   "Task1 : 2024-01-01, 3d"
-        #   "Task1 :done, des1, 2014-01-06, 2014-01-08"
-        #   "Task2 :active, des2, 2014-01-09, 3d"
-        #   "Task3 :crit, done, 2014-01-06, 24h"
-        if ':' in line and current_section:
-            # Split on first colon
-            parts = line.split(':', 1)
-            if len(parts) == 2:
-                task_name = parts[0].strip()
-                rest = parts[1].strip()
-
-                # Parse the rest (status, id, date, duration)
-                task_parts = [p.strip() for p in rest.split(',')]
-
-                # Default values
-                statuses = []  # List to collect all status keywords
-                task_id = None
-                start_date = None
-                end_date = None
-                duration = None
-
-                # Known status keywords
-                status_keywords = {'done', 'active', 'crit', 'milestone'}
-
-                # Helper to check if something is a duration
-                def is_duration(s):
-                    return re.match(r'^\d+[dwmyh]?$', s.lower()) is not None
-
-                # Helper to check if something is a date
-                def is_date(s):
-                    return re.match(r'^\d{4}-\d{2}-\d{2}$', s) is not None
-
-                # Helper to check if something is a task reference
-                def is_task_ref(s):
-                    return s.lower().startswith('after ') or s.lower().startswith('until ')
-
-                # Track the position of first non-status item
-                # Items before the first date/duration/task-ref are statuses and task_id
-                first_metadata_index = None
-
-                # First pass: identify what each part is
-                for i, part in enumerate(task_parts):
-                    part_lower = part.lower()
-
-                    # Skip empty parts
-                    if not part:
-                        continue
-
-                    # Check for status (done, active, crit, milestone)
-                    # Can have multiple statuses!
-                    if part_lower in status_keywords:
-                        statuses.append(part_lower)
-                        continue
-
-                    # Mark the first non-status item
-                    if first_metadata_index is None:
-                        first_metadata_index = i
-                        break
-
-                # Second pass: process metadata items (dates, durations, task refs, task_id)
-                # Start from where we left off (or beginning if no statuses)
-                start_index = first_metadata_index if first_metadata_index is not None else 0
-
-                for i in range(start_index, len(task_parts)):
-                    part = task_parts[i]
-                    part_lower = part.lower()
-
-                    # Skip empty parts
-                    if not part:
-                        continue
-
-                    # Skip if already processed as status
-                    if part_lower in status_keywords:
-                        continue
-
-                    # Check for duration pattern (e.g., 3d, 24h, 1w)
-                    if is_duration(part):
-                        duration = part
-                        continue
-
-                    # Check for date pattern (e.g., 2014-01-06)
-                    if is_date(part):
-                        if start_date is None:
-                            start_date = part
-                        else:
-                            end_date = part
-                        continue
-
-                    # Check for "after task" or "until task" pattern
-                    if is_task_ref(part):
-                        if part_lower.startswith('after '):
-                            start_date = part_lower
-                        else:
-                            end_date = part_lower
-                        continue
-
-                    # If we get here and don't have a task_id yet,
-                    # and this is early in the list, it's likely the task ID
-                    # Task IDs are short alphanumeric strings like "des1", "a1", "doc1"
-                    if task_id is None and i < 4:
-                        # It's a task ID if it's not any of the above types
-                        task_id = part
-
-                # Create the task
-                # Determine the start value
-                # - If we have both start and end dates (both are actual dates), use DateRange
-                # - If we have "until" but it's a task reference, treat it as the start (duration-like)
-                # - If we have duration but no start date, use empty string (will be omitted in render)
-                # - Otherwise use start_date (or default if needed)
-                if (end_date is not None and
-                    start_date is not None and
-                    not start_date.startswith('after ') and
-                    not end_date.startswith('until ')):
-                    # Both are dates (or date ranges)
-                    start_value = DateRange(start=start_date, end=end_date)
-                elif end_date is not None and end_date.startswith('until '):
-                    # "until task" is treated as a duration-like end marker
-                    start_value = end_date
-                elif duration is not None and start_date is None:
-                    # Duration without start date - use empty to trigger proper rendering
-                    start_value = ""
-                elif start_date is None:
-                    # No date info at all - use a reasonable default
-                    start_value = ""
-                else:
-                    start_value = start_date
-
-                task = GanttTask(
-                    name=task_name,
-                    start=start_value,
-                    duration=duration,
-                    statuses=statuses,
-                    task_id=task_id
-                )
+        task = _parse_gantt_task_line(line, strptime_format)
+        if task:
+            if current_section:
                 current_section.add_task(task)
-                continue
+            else:
+                diagram.add_task(task)
 
     return diagram
 
@@ -1121,9 +1368,6 @@ def parse_pie_chart(text: str, line_ending: LineEnding) -> PieChart:
 
         title_match = re.match(r'(.+?)\s*:\s*(\d+)', line)
         if title_match:
-            label = title_match.group(1)
-            value = int(title_match.group(2))
-            slice_data = PieSlice(label=label, value=value)
             diagram.add_slice(slice_data)
             continue
 
@@ -1373,6 +1617,9 @@ def parse_mermaid_text(text: str, line_ending: LineEnding) -> Optional[Union[
     Returns:
         Python Mermaid diagram object, or None if parsing fails
     """
+    # Extract frontmatter before parsing
+    frontmatter, text = extract_frontmatter(text)
+
     diagram_type = detect_diagram_type(text)
 
     parsers = {
@@ -1394,7 +1641,10 @@ def parse_mermaid_text(text: str, line_ending: LineEnding) -> Optional[Union[
     parser = parsers.get(diagram_type)
     if parser:
         try:
-            return parser(text, line_ending)
+            diagram = parser(text, line_ending)
+            if diagram is not None and frontmatter:
+                diagram.frontmatter = frontmatter
+            return diagram
         except Exception as e:
             print(f"Warning: Error parsing {diagram_type} diagram: {e}", file=sys.stderr)
 

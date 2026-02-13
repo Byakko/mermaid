@@ -327,7 +327,7 @@ class C4Diagram(Diagram):
         lines = []
 
         # Add config frontmatter if present
-        if self.config.to_dict():
+        if self.config.to_dict() or self.frontmatter:
             lines.append(self._render_config())
 
         # Add directive if present
@@ -415,7 +415,7 @@ class C4Deployment(Diagram):
         """Generate Mermaid syntax for the C4 deployment diagram."""
         lines = []
 
-        if self.config.to_dict():
+        if self.config.to_dict() or self.frontmatter:
             lines.append(self._render_config())
 
         if self.directive:

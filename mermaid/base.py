@@ -199,6 +199,7 @@ class Diagram(ABC):
         self.config = config or DiagramConfig()
         self.directive = directive
         self.metadata = metadata or {}
+        self.frontmatter: Dict[str, Any] = {}
         self._comments: List[str] = []
         self.line_ending = line_ending
 
@@ -244,20 +245,31 @@ class Diagram(ABC):
         return self._join_lines(f"%% {comment}" for comment in self._comments)
 
     def _render_config(self) -> str:
-        """Render the configuration as YAML frontmatter."""
+        """Render the configuration and frontmatter as YAML frontmatter."""
         config_dict = self.config.to_dict()
-        if not config_dict:
+        if not config_dict and not self.frontmatter:
             return ""
 
         lines = ["---"]
-        lines.append("config:")
-        for key, value in config_dict.items():
-            if key == "elk":
-                lines.append("  elk:")
-                for elk_key, elk_value in value.items():
-                    lines.append(f"    {elk_key}: {elk_value}")
+
+        # Render top-level frontmatter keys (e.g. displayMode)
+        for key, value in self.frontmatter.items():
+            if isinstance(value, bool):
+                lines.append(f"{key}: {'true' if value else 'false'}")
             else:
-                lines.append(f"  {key}: {value}")
+                lines.append(f"{key}: {value}")
+
+        # Render config section
+        if config_dict:
+            lines.append("config:")
+            for key, value in config_dict.items():
+                if key == "elk":
+                    lines.append("  elk:")
+                    for elk_key, elk_value in value.items():
+                        lines.append(f"    {elk_key}: {elk_value}")
+                else:
+                    lines.append(f"  {key}: {value}")
+
         lines.append("---")
         return self._join_lines(lines)
 

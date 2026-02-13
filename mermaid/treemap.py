@@ -116,7 +116,7 @@ class Treemap(Diagram):
         lines = []
 
         # Add config frontmatter if present
-        if self.config.to_dict():
+        if self.config.to_dict() or self.frontmatter:
             lines.append(self._render_config())
 
         # Add directive if present

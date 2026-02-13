@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "WebFetch(domain:mermaid.js.org)",
+      "Bash(echo:*)",
+      "Bash(find:*)"
     ]
   }
 }
