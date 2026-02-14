@@ -61,51 +61,11 @@ class GanttTask:
     excludes: Optional[str] = None
 
     def render(self) -> str:
-        """Render the task in Mermaid syntax."""
-        # Build the task line: TaskName :status1, status2, taskID, start, duration
-        # Example: "Task :crit, active, id1, 2014-01-01, 3d" or "Task :crit, active, 3d"
-        parts = []
-
-        # Status(es) first (after colon)
-        # Use statuses list if available, otherwise fall back to single status
-        if self.statuses:
-            # Multiple statuses: join with ", "
-            status_str = ", ".join(self.statuses)
-            parts.append(f":{status_str}")
-        elif self.status:
-            parts.append(f":{self.status.value}")
-        else:
-            parts.append(":")
-
-        # Task ID (optional)
-        if self.task_id:
-            parts.append(self.task_id)
-
-        # Start date/duration
-        # If start is DateRange, add it (and duration if present)
-        if isinstance(self.start, DateRange):
-            parts.append(str(self.start))
-            if self.duration:
-                parts.append(self.duration)
-        # If we have a duration, add start (if non-empty) and duration
-        elif self.duration:
-            if self.start:  # Add start only if non-empty
-                parts.append(str(self.start))
-            parts.append(self.duration)
-        # Otherwise just add start if it's non-empty
-        elif self.start:
-            parts.append(str(self.start))
-
-        # Join parts, filtering out empty parts (like lone ":")
-        filtered_parts = [p for p in parts if p != ":"]
-
-        # If we have no status, the first part should start with ":"
-        if not self.statuses and not self.status and filtered_parts:
-            return f"{self.name} : {', '.join(filtered_parts)}"
-        elif filtered_parts:
-            return f"{self.name} {', '.join(filtered_parts)}"
-        else:
-            return f"{self.name} :"
+        """Rendering has been moved to python_to_mermaid_converters/ptm_gantt.py"""
+        raise NotImplementedError(
+            "GanttTask.render() has been moved to "
+            "python_to_mermaid_converters.ptm_gantt.render_gantt_task()"
+        )
 
 
 @dataclass
@@ -233,63 +193,11 @@ class GanttChart(Diagram):
         return self
 
     def to_mermaid(self) -> str:
-        """
-        Generate Mermaid syntax for the Gantt chart.
-
-        Returns:
-            String containing valid Mermaid syntax
-        """
-        lines = []
-
-        # Add config frontmatter if present
-        if self.config.to_dict() or self.frontmatter:
-            lines.append(self._render_config())
-
-        # Add directive if present
-        if self.directive:
-            lines.append(str(self.directive))
-
-        # Add diagram type declaration
-        lines.append(self.diagram_type.value)
-
-        # Add title
-        if self.title:
-            lines.append(f"    title {self.title}")
-
-        # Add date format
-        if self.date_format:
-            lines.append(f"    dateFormat {self.date_format}")
-
-        # Add axis format if present
-        if self.axis_format:
-            lines.append(f"    axisFormat {self.axis_format}")
-
-        # Add exclusions if present
-        if self.excludes:
-            lines.append(f"    excludes {self.excludes}")
-
-        # Add weekend override if present
-        if self.weekend:
-            lines.append(f"    weekend {self.weekend}")
-
-        # Add header comments (between directives and first section)
-        for comment in self.header_comments:
-            lines.append(f"    {comment}")
-
-        # Add sectionless tasks
-        for task in self.tasks:
-            lines.append(f"    {task.render()}")
-
-        # Add sections
-        for section in self.sections:
-            lines.append(f"    section {section.name}")
-            for item in section.items:
-                if isinstance(item, str):
-                    lines.append(f"        {item}")
-                else:
-                    lines.append(f"        {item.render()}")
-
-        return self._join_lines(lines)
+        """Rendering has been moved to python_to_mermaid_converters/ptm_gantt.py"""
+        raise NotImplementedError(
+            "GanttChart.to_mermaid() has been moved to "
+            "python_to_mermaid_converters.ptm_gantt.render_gantt()"
+        )
 
     def __repr__(self) -> str:
         """String representation of the Gantt chart."""

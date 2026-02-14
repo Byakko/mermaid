@@ -4,7 +4,10 @@
       "Bash(python:*)",
       "WebFetch(domain:mermaid.js.org)",
       "Bash(echo:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(move:*)",
+      "Bash(ls:*)"
     ]
   }
 }
