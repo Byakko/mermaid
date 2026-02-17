@@ -206,12 +206,8 @@ def parse_gantt(text: str, line_ending: LineEnding) -> GanttChart:
         if not line:
             continue
 
-        # Preserve %% comment lines in their original position
+        # Skip comments (preserved from raw input by python_to_mermaid.py)
         if line.startswith("%%"):
-            if current_section:
-                current_section.add_comment(line)
-            else:
-                diagram.header_comments.append(line)
             continue
 
         if is_declaration(line, "gantt"):

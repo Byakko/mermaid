@@ -38,10 +38,6 @@ class PieSlice:
     value: float
     label: str
 
-    def render(self) -> str:
-        """Render the pie slice in Mermaid syntax."""
-        return f"{self.value}: {self.label}"
-
 
 class PieChart(Diagram):
     """
@@ -76,6 +72,9 @@ class PieChart(Diagram):
         self.title = title
         self.show_data = show_data
         self.slices: List[PieSlice] = []
+        # When True, showData/title appear on the 'pie' declaration line.
+        # When False, they appear on separate indented lines.
+        self.title_inline: bool = True
 
     @property
     def diagram_type(self) -> DiagramType:
@@ -86,39 +85,6 @@ class PieChart(Diagram):
         """Add a slice to the pie chart."""
         self.slices.append(PieSlice(value=value, label=label))
         return self
-
-    def to_mermaid(self) -> str:
-        """
-        Generate Mermaid syntax for the pie chart.
-
-        Returns:
-            String containing valid Mermaid syntax
-        """
-        lines = []
-
-        # Add config frontmatter if present
-        if self.config.to_dict() or self.frontmatter:
-            lines.append(self._render_config())
-
-        # Add directive if present
-        if self.directive:
-            lines.append(str(self.directive))
-
-        # Add diagram type declaration
-        lines.append(self.diagram_type.value)
-
-        # Add title
-        lines.append(f"    title {self.title}")
-
-        # Add show data if present
-        if self.show_data != ShowData.NONE:
-            lines.append(f"    {self.show_data.value}")
-
-        # Add slices
-        for slice in self.slices:
-            lines.append(f"    {slice.render()}")
-
-        return self._join_lines(lines)
 
     def __repr__(self) -> str:
         """String representation of the pie chart."""

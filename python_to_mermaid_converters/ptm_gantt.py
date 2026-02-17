@@ -63,21 +63,20 @@ def render_gantt_task(task: GanttTask) -> str:
         return f"{task.name} :"
 
 
-def render_gantt(chart: GanttChart) -> str:
+def render_gantt(chart: GanttChart) -> List[str]:
     """
-    Render a GanttChart object as Mermaid text.
+    Render a GanttChart object as a list of content lines.
+
+    Frontmatter and comments are NOT included — those are preserved
+    from the raw input by python_to_mermaid.py.
 
     Args:
         chart: The GanttChart to render
 
     Returns:
-        Complete Mermaid gantt chart text
+        List of content lines
     """
     lines: List[str] = []
-
-    # Add config frontmatter if present
-    if chart.config.to_dict() or chart.frontmatter:
-        lines.append(render_config(chart))
 
     # Add directive if present
     if chart.directive:
@@ -106,10 +105,6 @@ def render_gantt(chart: GanttChart) -> str:
     if chart.weekend:
         lines.append(f"    weekend {chart.weekend}")
 
-    # Add header comments (between directives and first section)
-    for comment in chart.header_comments:
-        lines.append(f"    {comment}")
-
     # Add sectionless tasks
     for task in chart.tasks:
         lines.append(f"    {render_gantt_task(task)}")
@@ -118,9 +113,7 @@ def render_gantt(chart: GanttChart) -> str:
     for section in chart.sections:
         lines.append(f"    section {section.name}")
         for item in section.items:
-            if isinstance(item, str):
-                lines.append(f"        {item}")
-            else:
+            if isinstance(item, GanttTask):
                 lines.append(f"        {render_gantt_task(item)}")
 
-    return join_lines(lines, chart.line_ending)
+    return lines

@@ -200,6 +200,8 @@ class Diagram(ABC):
         self.directive = directive
         self.metadata = metadata or {}
         self.frontmatter: Dict[str, Any] = {}
+        self.raw_frontmatter: Optional[str] = None
+        self.raw_input: Optional[str] = None
         self._comments: List[str] = []
         self.line_ending = line_ending
 
@@ -209,15 +211,6 @@ class Diagram(ABC):
         """Return the type of this diagram."""
         pass
 
-    @abstractmethod
-    def to_mermaid(self) -> str:
-        """
-        Generate Mermaid syntax for this diagram.
-
-        Returns:
-            String containing valid Mermaid syntax
-        """
-        pass
 
     def add_comment(self, comment: str) -> None:
         """

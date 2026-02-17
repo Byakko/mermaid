@@ -4,10 +4,8 @@ Reference docs for all diagram types: https://mermaid.js.org/intro/syntax-refere
 
 ## Diagram Checklist
 
-All diagram types have Python object definitions in `mermaid/`. None of the
-parsers in `sanitize_mermaid.py` are fully working — they are incomplete
-reference code. Each diagram needs its converter modules written and tested
-from scratch.
+All diagram types have Python object definitions in `mermaid/`. Each diagram
+needs its converter modules written and tested from scratch.
 
 - [x] Gantt (`mermaid/gantt.py`) - mtp + ptm converters done
 - [ ] Flowchart (`mermaid/flowchart.py`)
@@ -16,7 +14,7 @@ from scratch.
 - [ ] State Diagram (`mermaid/state_diagram.py`)
 - [ ] ER Diagram (`mermaid/er_diagram.py`)
 - [ ] User Journey (`mermaid/user_journey.py`)
-- [ ] Pie Chart (`mermaid/pie_chart.py`)
+- [x] Pie Chart (`mermaid/pie_chart.py`) - mtp + ptm converters done
 - [ ] Mindmap (`mermaid/mindmap.py`)
 - [ ] Git Graph (`mermaid/git_graph.py`)
 - [ ] Quadrant Chart (`mermaid/quadrant_chart.py`)
@@ -35,7 +33,7 @@ from scratch.
 
 ## Process: Adding Converter Support for a Diagram Type
 
-This documents the process we followed for gantt and will follow for each subsequent diagram type. The goal is to extract standalone converter modules that `sanitize_mermaid_2.py` uses, working one diagram type at a time.
+This documents the process we followed for gantt and pie chart, and will follow for each subsequent diagram type. The goal is to create standalone converter modules that `sanitize_mermaid.py` uses, working one diagram type at a time.
 
 ### Directory Structure
 
@@ -54,28 +52,25 @@ python_to_mermaid_converters/     # python object -> text
 
 mermaid_to_python.py              # entry point: routes to mtp_* parsers
 python_to_mermaid.py              # entry point: routes to ptm_* renderers
-sanitize_mermaid_2.py             # CLI script using the above two
+sanitize_mermaid.py               # CLI script using the above two
 ```
 
 ### Step-by-step Process
-
-For each diagram type, the work is the same. `sanitize_mermaid.py` has
-incomplete/broken parser code that can be used as a starting reference, but
-none of it works as-is. Each converter must be written and tested properly.
 
 1. **Study the Mermaid syntax** using the reference at https://mermaid.js.org/intro/syntax-reference.html and find the specific page for the diagram type
 
 2. **Create `mtp_<diagram>.py`** in `mermaid_to_python_converters/`
    - Write the parser for converting mermaid text to Python objects
-   - Use `sanitize_mermaid.py` as a reference starting point, but expect to fix and complete the code
    - Import shared primitives from `mtp_common.py`
    - Import diagram classes from `mermaid` package
+   - Parsers skip comments — they are not stored on diagram objects
    - Add any new shared primitives to `mtp_common.py` if needed
 
 3. **Create `ptm_<diagram>.py`** in `python_to_mermaid_converters/`
-   - Extract the `render()` methods from each dataclass and the `to_mermaid()` method from the diagram class in `mermaid/<diagram>.py`
-   - Rewrite them as standalone functions (e.g., `render_<type>_task()`, `render_<type>()`)
-   - Import shared utilities from `ptm_common.py`
+   - Write standalone renderer functions from scratch (e.g., `render_<type>()`)
+   - The renderer returns `List[str]` of content lines only — no frontmatter, no comments, no joined string
+   - Comments and frontmatter are handled upstream by `python_to_mermaid.py`, so the renderer never needs to deal with them
+   - Import shared utilities from `ptm_common.py` if needed
 
 4. **Test incrementally** — a full round-trip test won't work until both the parser and renderer are correct, so:
    - Test the parser in isolation first with known mermaid inputs
@@ -84,20 +79,20 @@ none of it works as-is. Each converter must be written and tested properly.
 
 5. **Wire up the entry points**
    - Add the new parser to the `parsers` dict in `mermaid_to_python.py`
-   - Add an `isinstance` branch in `python_to_mermaid.py`
+   - Add the diagram class → renderer function mapping to the `_RENDERERS` dict in `python_to_mermaid.py`
 
-6. **Comment out the original code**
-   - In `sanitize_mermaid.py`: comment out the parser functions and the entry in the `parsers` dict
-   - In `mermaid/<diagram>.py`: replace `render()` and `to_mermaid()` bodies with `NotImplementedError` stubs that point to the new location
-   - Note: `to_mermaid()` is abstract on `Diagram`, so the stub must remain as a concrete method (not deleted), otherwise the class can't be instantiated
+6. **Clean up the diagram objects**
+   - In `mermaid/<diagram>.py`: remove any `render()` methods from data objects (e.g., `GanttTask.render()`, `PieSlice.render()`) and remove `to_mermaid()` from the diagram class
+   - Remove any comment-storage fields from diagram objects — comments are preserved by `python_to_mermaid.py` using `raw_input`
 
-7. **Verify** that `sanitize_mermaid_2.py` works end-to-end with the new diagram type
+7. **Verify** that `sanitize_mermaid.py` works end-to-end with the new diagram type
 
 ### Key Design Notes
 
 - Functions are standalone — they operate on diagram objects but live outside them
 - `mtp_common.py` holds parsing primitives shared across diagram types
-- `ptm_common.py` holds rendering utilities shared across diagram types (`join_lines`, `render_config`)
-- `sanitize_mermaid.py` is progressively hollowed out but never deleted — it remains as reference
-- `sanitize_mermaid_2.py` is the replacement CLI that imports from the converter modules
+- `ptm_common.py` holds shared rendering utilities (e.g., `join_lines`)
+- Comments and frontmatter are preserved by `python_to_mermaid.py` using `raw_input` from the original text — individual converters never see them
+- Renderers return `List[str]` (content lines only), not joined strings
+- `python_to_mermaid.py` uses a `_RENDERERS` dict mapping diagram class → renderer function
 - Each diagram type gets its own `mtp_` and `ptm_` file — no monolithic modules

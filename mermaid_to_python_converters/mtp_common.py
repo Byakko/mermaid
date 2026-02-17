@@ -11,18 +11,21 @@ from typing import Any, Dict, List, Optional, Tuple
 # Frontmatter Extraction
 # =============================================================================
 
-def extract_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
+def extract_frontmatter(text: str) -> Tuple[Optional[str], str]:
     """
     Extract YAML frontmatter from the beginning of Mermaid text.
 
     Frontmatter is delimited by ``---`` lines at the start of the text.
-    Only simple ``key: value`` pairs are supported (no nested YAML).
+    The raw text between the delimiters is preserved as-is (including
+    indentation and nested structure) so it can be round-tripped without
+    needing a full YAML parser.
 
     Args:
         text: Raw Mermaid diagram text
 
     Returns:
-        Tuple of (frontmatter dict, remaining text with frontmatter stripped)
+        Tuple of (raw frontmatter string including ``---`` delimiters, or
+        None if no frontmatter found; remaining text with frontmatter stripped)
     """
     lines = text.split("\n")
 
@@ -34,7 +37,7 @@ def extract_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
             break
 
     if first_idx is None or lines[first_idx].strip() != "---":
-        return {}, text
+        return None, text
 
     # Look for closing ---
     closing_idx = None
@@ -44,30 +47,13 @@ def extract_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
             break
 
     if closing_idx is None:
-        return {}, text
+        return None, text
 
-    # Parse simple key: value pairs
-    frontmatter: Dict[str, Any] = {}
-    for line in lines[first_idx + 1 : closing_idx]:
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        match = re.match(r'^(\w[\w-]*)\s*:\s*(.+)$', stripped)
-        if match:
-            key = match.group(1)
-            value = match.group(2).strip()
-            # Simple type coercion
-            if value.lower() in ("true", "false"):
-                frontmatter[key] = value.lower() == "true"
-            elif re.match(r'^-?\d+$', value):
-                frontmatter[key] = int(value)
-            elif re.match(r'^-?\d+\.\d+$', value):
-                frontmatter[key] = float(value)
-            else:
-                frontmatter[key] = value
+    # Preserve the raw frontmatter block (including --- delimiters)
+    raw = "\n".join(lines[first_idx : closing_idx + 1])
 
     remaining = "\n".join(lines[:first_idx] + lines[closing_idx + 1 :])
-    return frontmatter, remaining
+    return raw, remaining
 
 
 # =============================================================================
@@ -100,7 +86,7 @@ def detect_diagram_type(text: str) -> str:
         "er": r"^erDiagram\s*$",
         "journey": r"^journey\s*$",
         "gantt": r"^gantt\s*$",
-        "pie": r"^pie\s+.*$",
+        "pie": r"^pie(\s+.*)?$",
         "mindmap": r"^mindmap\s*$",
         "git": r"^gitGraph\s*$",
         "quadrant": r"^quadrantChart\s*$",

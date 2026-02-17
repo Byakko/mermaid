@@ -60,12 +60,6 @@ class GanttTask:
     # For exclusive tasks
     excludes: Optional[str] = None
 
-    def render(self) -> str:
-        """Rendering has been moved to python_to_mermaid_converters/ptm_gantt.py"""
-        raise NotImplementedError(
-            "GanttTask.render() has been moved to "
-            "python_to_mermaid_converters.ptm_gantt.render_gantt_task()"
-        )
 
 
 @dataclass
@@ -78,10 +72,6 @@ class GanttMilestone:
     """
     name: str
     date: Union[str, datetime]
-
-    def render(self) -> str:
-        """Render the milestone in Mermaid syntax."""
-        return f"milestone : {self.name}, {self.date}, 0d"
 
 
 @dataclass
@@ -97,9 +87,7 @@ class GanttSection:
     name: str
     tasks: List[GanttTask] = field(default_factory=list)
     milestones: List[GanttMilestone] = field(default_factory=list)
-    # Ordered list of items (tasks, milestones, and comment strings) preserving
-    # original ordering so that ``%%`` comments survive round-tripping.
-    items: List[Union[GanttTask, GanttMilestone, str]] = field(default_factory=list)
+    items: List[Union[GanttTask, GanttMilestone]] = field(default_factory=list)
 
     def add_task(self, task: GanttTask) -> 'GanttSection':
         """Add a task to the section."""
@@ -111,11 +99,6 @@ class GanttSection:
         """Add a milestone to the section."""
         self.milestones.append(milestone)
         self.items.append(milestone)
-        return self
-
-    def add_comment(self, text: str) -> 'GanttSection':
-        """Add a comment line (including the ``%%`` prefix) to the section."""
-        self.items.append(text)
         return self
 
 
@@ -158,8 +141,6 @@ class GanttChart(Diagram):
         self.sections: List[GanttSection] = []
         # Tasks not belonging to any section
         self.tasks: List[GanttTask] = []
-        # Comments in the directive/pre-section area
-        self.header_comments: List[str] = []
         # Axis formatting
         self.axis_format: Optional[str] = None  # e.g., "%Y-%m-%d"
         # Exclusions
@@ -191,13 +172,6 @@ class GanttChart(Diagram):
         """Set the exclusions (e.g., 'weekends')."""
         self.excludes = excludes
         return self
-
-    def to_mermaid(self) -> str:
-        """Rendering has been moved to python_to_mermaid_converters/ptm_gantt.py"""
-        raise NotImplementedError(
-            "GanttChart.to_mermaid() has been moved to "
-            "python_to_mermaid_converters.ptm_gantt.render_gantt()"
-        )
 
     def __repr__(self) -> str:
         """String representation of the Gantt chart."""

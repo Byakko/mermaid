@@ -23,37 +23,18 @@ def join_lines(lines: List[str], line_ending: LineEnding) -> str:
 
 def render_config(diagram: Diagram) -> str:
     """
-    Render the configuration and frontmatter as YAML frontmatter.
+    Render the frontmatter block.
+
+    If raw_frontmatter is set (preserved from parsing), it is returned
+    as-is.  This ensures nested YAML structures round-trip faithfully
+    without needing a full YAML parser.
 
     Args:
-        diagram: Diagram whose config/frontmatter to render
+        diagram: Diagram whose frontmatter to render
 
     Returns:
-        Frontmatter block string, or empty string if no config/frontmatter
+        Frontmatter block string, or empty string if none
     """
-    config_dict = diagram.config.to_dict()
-    if not config_dict and not diagram.frontmatter:
-        return ""
-
-    lines = ["---"]
-
-    # Render top-level frontmatter keys (e.g. displayMode)
-    for key, value in diagram.frontmatter.items():
-        if isinstance(value, bool):
-            lines.append(f"{key}: {'true' if value else 'false'}")
-        else:
-            lines.append(f"{key}: {value}")
-
-    # Render config section
-    if config_dict:
-        lines.append("config:")
-        for key, value in config_dict.items():
-            if key == "elk":
-                lines.append("  elk:")
-                for elk_key, elk_value in value.items():
-                    lines.append(f"    {elk_key}: {elk_value}")
-            else:
-                lines.append(f"  {key}: {value}")
-
-    lines.append("---")
-    return join_lines(lines, diagram.line_ending)
+    if diagram.raw_frontmatter is not None:
+        return diagram.raw_frontmatter
+    return ""
