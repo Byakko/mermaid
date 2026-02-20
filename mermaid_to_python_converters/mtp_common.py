@@ -273,3 +273,72 @@ def is_task_ref(s: str) -> bool:
     """Check if a string is a task reference (after ... or until ...)."""
     lower = s.lower()
     return lower.startswith('after ') or lower.startswith('until ')
+
+
+# =============================================================================
+# Color Parsing
+# =============================================================================
+
+def try_parse_color(text: str) -> Optional['Color']:
+    """
+    Try to parse a color value from text.
+
+    Supports rgb(...), rgba(...), hex (#...), and named colors.
+
+    Args:
+        text: Text that may contain a color value
+
+    Returns:
+        A Color object, or None if no color pattern matched
+    """
+    from mermaid.base import Color
+
+    text = text.strip()
+
+    # rgb(r, g, b)
+    m = re.match(r'rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)', text)
+    if m:
+        return Color(rgb=(int(m.group(1)), int(m.group(2)), int(m.group(3))))
+
+    # rgba(r, g, b, a)
+    m = re.match(r'rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)', text)
+    if m:
+        return Color(rgba=(int(m.group(1)), int(m.group(2)), int(m.group(3)), float(m.group(4))))
+
+    # Hex color
+    m = re.match(r'#[0-9a-fA-F]{3,8}', text)
+    if m:
+        return Color(hex=m.group(0))
+
+    # Named color (simple word)
+    m = re.match(r'[a-zA-Z]+', text)
+    if m:
+        return Color(name=m.group(0))
+
+    return None
+
+
+# =============================================================================
+# Block Keyword Matching
+# =============================================================================
+
+def try_parse_block_open(line: str, keyword: str) -> Optional[str]:
+    """
+    Match a block-opening line like 'keyword Description text'.
+
+    Used for sequence diagram constructs (loop, alt, opt, par, critical,
+    break, rect, box) and potentially other diagram types with similar
+    ``keyword [description]`` ... ``end`` block syntax.
+
+    Args:
+        line: Line to check
+        keyword: Block keyword (e.g. "loop", "alt", "opt")
+
+    Returns:
+        The description text after the keyword, or None if no match.
+        Returns empty string if keyword matched with no description.
+    """
+    m = re.match(rf'{keyword}(?:\s+(.*))?$', line, re.IGNORECASE)
+    if m:
+        return (m.group(1) or '').strip()
+    return None

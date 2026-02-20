@@ -4,16 +4,22 @@ Convert Python diagram objects back to Mermaid text.
 
 from typing import List, Optional
 
-from mermaid import GanttChart, PieChart
+from mermaid import GanttChart, PieChart, Flowchart, SequenceDiagram, Timeline
 from mermaid.base import Diagram, DiagramType
 
 from python_to_mermaid_converters.ptm_gantt import render_gantt
 from python_to_mermaid_converters.ptm_pie_chart import render_pie_chart
+from python_to_mermaid_converters.ptm_flowchart import render_flowchart
+from python_to_mermaid_converters.ptm_sequence import render_sequence
+from python_to_mermaid_converters.ptm_timeline import render_timeline
 
 # Maps diagram types to their renderer functions.
 _RENDERERS = {
     GanttChart: render_gantt,
     PieChart: render_pie_chart,
+    Flowchart: render_flowchart,
+    SequenceDiagram: render_sequence,
+    Timeline: render_timeline,
 }
 
 

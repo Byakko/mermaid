@@ -69,12 +69,18 @@ class Participant:
     label: Optional[str] = None
     type: ParticipantType = ParticipantType.PARTICIPANT
     order: Optional[int] = None  # Explicit order of appearance
+    raw_alias: Optional[str] = None  # Preserves original alias text for round-tripping
+    raw_line: Optional[str] = None  # Preserves full original line (e.g. @{} syntax)
 
     def render(self) -> str:
         """Render the participant in Mermaid syntax."""
+        if self.raw_line is not None:
+            return self.raw_line
         type_str = self.type.value
+        if self.raw_alias is not None:
+            return f"{type_str} {self.id} as {self.raw_alias}"
         if self.label:
-            return f"{type_str} {self.id} as \"{self.label}\""
+            return f"{type_str} {self.id} as {self.label}"
         return f"{type_str} {self.id}"
 
     def __repr__(self) -> str:
@@ -129,11 +135,12 @@ class Message:
         arrow = self.arrow.value
 
         # Handle activation/deactivation shortcuts
-        suffix = ""
+        # +/- goes between arrow and receiver: Alice->>+Bob: Hello
+        receiver_prefix = ""
         if self.activate_receiver:
-            suffix += "+"
+            receiver_prefix = "+"
         elif self.deactivate_receiver:
-            suffix += "-"
+            receiver_prefix = "-"
         if self.activate_sender:
             arrow = "+" + arrow
         elif self.deactivate_sender:
@@ -142,7 +149,7 @@ class Message:
         # Handle line breaks in message text
         text = self.text.replace("\n", "\\n")
 
-        return f"{self.from_participant}{arrow}{self.to_participant}: {text}{suffix}"
+        return f"{self.from_participant}{arrow}{receiver_prefix}{self.to_participant}: {text}"
 
 
 @dataclass
@@ -176,14 +183,18 @@ class Note:
     participants: Union[str, List[str]]
     text: str
     color: Optional[Color] = None
+    raw_participants: Optional[str] = None  # Preserves original participant text
 
     def render(self) -> str:
         """Render the note in Mermaid syntax."""
-        participants_str = (
-            ", ".join(self.participants)
-            if isinstance(self.participants, list)
-            else self.participants
-        )
+        if self.raw_participants is not None:
+            participants_str = self.raw_participants
+        else:
+            participants_str = (
+                ", ".join(self.participants)
+                if isinstance(self.participants, list)
+                else self.participants
+            )
         text = self.text.replace("\n", "\\n")
 
         color_prefix = ""
@@ -209,6 +220,7 @@ class BoxGroup:
     color: Optional[Color] = None
     description: Optional[str] = None
     participants: List[Participant] = field(default_factory=list)
+    raw_header: Optional[str] = None  # Preserves original header for round-tripping
 
     def add_participant(self, participant: Participant) -> None:
         """Add a participant to the box."""
@@ -217,7 +229,9 @@ class BoxGroup:
     def render(self, line_ending: LineEnding = LineEnding.LF) -> str:
         """Render the box group in Mermaid syntax."""
         lines = []
-        if self.description and self.color:
+        if self.raw_header is not None:
+            lines.append(self.raw_header)
+        elif self.description and self.color:
             lines.append(f"box {self.color} {self.description}")
         elif self.description:
             lines.append(f"box {self.description}")
@@ -491,6 +505,7 @@ class RectBlock:
     """
     color: Color
     messages: List[Message] = field(default_factory=list)
+    raw_header: Optional[str] = None  # Preserves original header for round-tripping
 
     def add_message(self, message: Message) -> None:
         """Add a message to the rect block."""
@@ -499,7 +514,8 @@ class RectBlock:
     def render(self, indent: int = 0, line_ending: LineEnding = LineEnding.LF) -> str:
         """Render the rect block in Mermaid syntax."""
         indent_str = "    " * indent
-        lines = [f"{indent_str}rect {self.color}"]
+        header = self.raw_header if self.raw_header is not None else f"rect {self.color}"
+        lines = [f"{indent_str}{header}"]
 
         for message in self.messages:
             lines.append(f"{indent_str}    {message.render()}")
@@ -643,6 +659,7 @@ class SequenceDiagram(Diagram):
         self.box_groups: List[BoxGroup] = []
         self.actor_links: List[Union[ActorLink, ActorLinks]] = []
         self.autonumber: bool = False
+        self.items: List[Any] = []  # Ordered items for round-trip rendering
 
     @property
     def diagram_type(self) -> DiagramType:

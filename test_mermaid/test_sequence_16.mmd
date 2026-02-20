@@ -1,0 +1,27 @@
+%% Comprehensive sequence diagram test
+sequenceDiagram
+    autonumber
+    participant Alice
+    actor Bob
+    participant Charlie as Charlie Brown
+    Alice->>Bob: Hello Bob
+    activate Bob
+    Note right of Bob: Bob thinks about it
+    Bob-->>Alice: Hi Alice
+    deactivate Bob
+    loop Health check
+        Bob->>Charlie: Are you OK?
+        Charlie-->>Bob: I'm fine
+    end
+    alt is available
+        Alice->>Charlie: Let's meet
+    else is busy
+        Alice->>Charlie: Maybe later
+    end
+    par Notification 1
+        Alice->>Bob: Notify
+    and Notification 2
+        Alice->>Charlie: Notify
+    end
+    Alice-xBob: Connection lost
+    Alice--xCharlie: Connection lost

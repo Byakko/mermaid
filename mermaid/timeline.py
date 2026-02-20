@@ -1,11 +1,12 @@
 """
 Timeline diagram classes for Mermaid.
 
-This module contains classes for representing Mermaid timeline diagrams.
+This module contains classes for representing Mermaid timeline diagrams,
+including time periods with multiple events and section grouping.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Any, Union
 from datetime import datetime
 
 from mermaid.base import (
@@ -18,9 +19,45 @@ from mermaid.base import (
 
 
 @dataclass
+class TimePeriod:
+    """
+    Represents a time period with one or more events.
+
+    Examples:
+        2024-01-01 : Project Start
+        2002 : LinkedIn : Myspace : Facebook
+        Industrial Revolution : Invention of the Steam Engine
+    """
+    period: str
+    events: List[str] = field(default_factory=list)
+
+    def add_event(self, event: str) -> None:
+        """Add an event to this time period."""
+        self.events.append(event)
+
+
+@dataclass
+class TimelineSection:
+    """
+    Represents a section grouping in a timeline.
+
+    Example:
+        section Section Name
+            2024-01-01 : Event 1
+            2024-06-15 : Event 2
+    """
+    name: str
+    periods: List[TimePeriod] = field(default_factory=list)
+
+    def add_period(self, period: TimePeriod) -> None:
+        """Add a time period to this section."""
+        self.periods.append(period)
+
+
+@dataclass
 class Event:
     """
-    Represents an event in a timeline.
+    Represents a legacy event in a timeline (kept for backward compatibility).
 
     Example:
         2024-01-01 : Project Start
@@ -49,29 +86,25 @@ class Timeline(Diagram):
     Example:
         timeline
             title Project Timeline
-            2024-01-01 : Project Start
-            2024-06-15 : Milestone 1
-            2024-12-31 : Project End
+            section Early
+                2024-01-01 : Project Start
+            section Late
+                2024-12-31 : Project End
     """
 
     def __init__(
         self,
-        title: str = "Timeline",
+        title: Optional[str] = None,
         config: Optional[DiagramConfig] = None,
         directive: Optional[Directive] = None,
         line_ending: LineEnding = LineEnding.LF
     ):
-        """
-        Initialize a timeline.
-
-        Args:
-            title: Title of the timeline
-            config: Diagram configuration
-            directive: Directive for pre-render configuration
-        """
         super().__init__(config, directive, line_ending=line_ending)
         self.title = title
-        self.events: List[Event] = []
+        self.events: List[Event] = []  # Legacy flat list
+        self.sections: List[TimelineSection] = []
+        self.periods: List[TimePeriod] = []  # Top-level (sectionless) periods
+        self.items: List[Any] = []  # Ordered items for round-trip rendering
 
     @property
     def diagram_type(self) -> DiagramType:
@@ -79,8 +112,18 @@ class Timeline(Diagram):
         return DiagramType.TIMELINE
 
     def add_event(self, event: Event) -> 'Timeline':
-        """Add an event to the timeline."""
+        """Add a legacy event to the timeline."""
         self.events.append(event)
+        return self
+
+    def add_section(self, section: TimelineSection) -> 'Timeline':
+        """Add a section to the timeline."""
+        self.sections.append(section)
+        return self
+
+    def add_period(self, period: TimePeriod) -> 'Timeline':
+        """Add a top-level time period."""
+        self.periods.append(period)
         return self
 
     def to_mermaid(self) -> str:
@@ -104,9 +147,10 @@ class Timeline(Diagram):
         lines.append(self.diagram_type.value)
 
         # Add title
-        lines.append(f'    title "{self.title}"')
+        if self.title:
+            lines.append(f'    title {self.title}')
 
-        # Add events
+        # Add events (legacy)
         for event in self.events:
             lines.append(f"    {event.render()}")
 
@@ -114,4 +158,5 @@ class Timeline(Diagram):
 
     def __repr__(self) -> str:
         """String representation of the timeline."""
-        return f"Timeline(title='{self.title}', events={len(self.events)})"
+        n_periods = len(self.periods) + sum(len(s.periods) for s in self.sections)
+        return f"Timeline(title={self.title!r}, periods={n_periods})"

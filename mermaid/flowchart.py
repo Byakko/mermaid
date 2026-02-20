@@ -56,6 +56,8 @@ class FlowchartNodeShape(Enum):
     # Lean shapes
     LEAN_RIGHT = "lean_right"  # [text/]
     LEAN_LEFT = "lean_left"  # [\text]
+    # Asymmetric
+    ASYMMETRIC = "asymmetric"  # >text]
     # Flagged shapes
     FLAG_RIGHT = "flag_right"  # ~text~
     FLAG_LEFT = "flag_left"  # text~
@@ -71,11 +73,12 @@ class FlowchartNodeShape(Enum):
             FlowchartNodeShape.CYLINDER: "[(",
             FlowchartNodeShape.CIRCLE: "((",
             FlowchartNodeShape.HEXAGON: "{{",
-            FlowchartNodeShape.PARALLELOGRAM: "/",
-            FlowchartNodeShape.PARALLELOGRAM_ALT: "[",
-            FlowchartNodeShape.TRAPEZOID: "/",
-            FlowchartNodeShape.TRAPEZOID_ALT: "[",
+            FlowchartNodeShape.PARALLELOGRAM: "[/",
+            FlowchartNodeShape.PARALLELOGRAM_ALT: "[\\",
+            FlowchartNodeShape.TRAPEZOID: "[/",
+            FlowchartNodeShape.TRAPEZOID_ALT: "[\\",
             FlowchartNodeShape.DOUBLE_CIRCLE: "(((",
+            FlowchartNodeShape.ASYMMETRIC: ">",
             FlowchartNodeShape.RHOMBUS: "{",
             FlowchartNodeShape.LEAN_RIGHT: "[",
             FlowchartNodeShape.LEAN_LEFT: "[",
@@ -95,11 +98,12 @@ class FlowchartNodeShape(Enum):
             FlowchartNodeShape.CYLINDER: ")]",
             FlowchartNodeShape.CIRCLE: "))",
             FlowchartNodeShape.HEXAGON: "}}",
-            FlowchartNodeShape.PARALLELOGRAM: "/",
-            FlowchartNodeShape.PARALLELOGRAM_ALT: "/]",
-            FlowchartNodeShape.TRAPEZOID: "\\",
-            FlowchartNodeShape.TRAPEZOID_ALT: "\\]",
+            FlowchartNodeShape.PARALLELOGRAM: "/]",
+            FlowchartNodeShape.PARALLELOGRAM_ALT: "\\]",
+            FlowchartNodeShape.TRAPEZOID: "\\]",
+            FlowchartNodeShape.TRAPEZOID_ALT: "/]",
             FlowchartNodeShape.DOUBLE_CIRCLE: ")))",
+            FlowchartNodeShape.ASYMMETRIC: "]",
             FlowchartNodeShape.RHOMBUS: "}",
             FlowchartNodeShape.LEAN_RIGHT: "/]",
             FlowchartNodeShape.LEAN_LEFT: "\\]",
@@ -197,6 +201,7 @@ class FlowchartEdge:
     label: Optional[str] = None
     label_text: Optional[str] = None  # Alternative label format
     length: Optional[int] = None  # Edge length for rendering
+    raw_arrow: Optional[str] = None  # Original arrow syntax for round-tripping
 
     def render(self) -> str:
         """Render the edge in Mermaid syntax."""
@@ -230,6 +235,8 @@ class FlowchartSubgraph:
     edges: List[FlowchartEdge] = field(default_factory=list)
     # Subgraphs can contain nested subgraphs
     subgraphs: List['FlowchartSubgraph'] = field(default_factory=list)
+    items: List[Any] = field(default_factory=list)  # Ordered statements for round-tripping
+    raw_header: Optional[str] = None  # Original "subgraph ..." line for round-tripping
     style: Optional[Style] = None
     class_name: Optional[str] = None
 
@@ -317,6 +324,33 @@ class Comment:
         return f"%% {self.text}"
 
 
+@dataclass
+class NodeStyleDef:
+    """
+    Represents an inline style applied to specific nodes.
+    Format: style nodeId fill:#f9f,stroke:#333
+    """
+    node_ids: List[str]
+    raw_styles: str  # Raw CSS string for round-tripping
+
+    def render(self) -> str:
+        nodes = ",".join(self.node_ids)
+        return f"style {nodes} {self.raw_styles}"
+
+
+@dataclass
+class LinkStyleDef:
+    """
+    Represents a link style definition.
+    Format: linkStyle 0 stroke:#ff3,stroke-width:4px
+    """
+    link_index: str  # Can be a number or "default"
+    raw_styles: str  # Raw CSS string for round-tripping
+
+    def render(self) -> str:
+        return f"linkStyle {self.link_index} {self.raw_styles}"
+
+
 class Flowchart(Diagram):
     """
     Represents a Mermaid flowchart diagram.
@@ -348,9 +382,12 @@ class Flowchart(Diagram):
         """
         super().__init__(config, directive, line_ending=line_ending)
         self.direction = direction
+        self.keyword: str = "flowchart"  # "flowchart" or "graph"
+        self.raw_direction: Optional[str] = None  # Preserve original e.g. "TD"
         self.nodes: Dict[str, FlowchartNode] = {}
         self.edges: List[FlowchartEdge] = []
         self.subgraphs: List[FlowchartSubgraph] = []
+        self.items: List[Any] = []  # Ordered statements for round-tripping
         self.class_defs: List[ClassDef] = []
         self.style_classes: List[StyleClass] = []
         self.interactions: List[Interaction] = []

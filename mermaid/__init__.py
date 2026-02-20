@@ -164,6 +164,8 @@ from mermaid.mindmap import (
 # Timeline
 from mermaid.timeline import (
     Timeline,
+    TimePeriod,
+    TimelineSection,
     Event,
 )
 

@@ -10,6 +10,9 @@ from mermaid.base import Diagram, LineEnding
 from mermaid_to_python_converters.mtp_common import extract_frontmatter, detect_diagram_type
 from mermaid_to_python_converters.mtp_gantt import parse_gantt
 from mermaid_to_python_converters.mtp_pie_chart import parse_pie_chart
+from mermaid_to_python_converters.mtp_flowchart import parse_flowchart
+from mermaid_to_python_converters.mtp_sequence import parse_sequence
+from mermaid_to_python_converters.mtp_timeline import parse_timeline
 
 
 def mermaid_to_python(text: str, line_ending: LineEnding = LineEnding.LF) -> Optional[Diagram]:
@@ -37,6 +40,9 @@ def mermaid_to_python(text: str, line_ending: LineEnding = LineEnding.LF) -> Opt
     parsers = {
         "gantt": parse_gantt,
         "pie": parse_pie_chart,
+        "flowchart": parse_flowchart,
+        "sequence": parse_sequence,
+        "timeline": parse_timeline,
     }
 
     parser = parsers.get(diagram_type)
