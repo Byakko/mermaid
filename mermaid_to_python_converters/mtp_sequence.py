@@ -35,6 +35,9 @@ from mermaid_to_python_converters.mtp_common import (
     is_declaration,
     try_parse_color,
     try_parse_block_open,
+    is_skip_line,
+    strip_keyword,
+    accumulate_brackets,
 )
 
 
@@ -72,35 +75,6 @@ _ARROW_LOOKUP = {p: a for p, a in _ARROW_PATTERNS}
 
 
 # ---------------------------------------------------------------------------
-# Multi-line accumulation
-# ---------------------------------------------------------------------------
-
-def _accumulate_braces(lines: List[str], start_idx: int) -> tuple:
-    """
-    Accumulate a potentially multi-line statement by tracking brace depth.
-
-    Used for @{...} JSON metadata syntax that may span multiple lines.
-
-    Returns (accumulated_text_stripped, next_index).
-    """
-    first = lines[start_idx]
-    depth = first.count('{') - first.count('}')
-
-    if depth <= 0:
-        return first.strip(), start_idx + 1
-
-    parts = [first]
-    idx = start_idx + 1
-    while idx < len(lines) and depth > 0:
-        line = lines[idx]
-        depth += line.count('{') - line.count('}')
-        parts.append(line)
-        idx += 1
-
-    return ' '.join(p.strip() for p in parts), idx
-
-
-# ---------------------------------------------------------------------------
 # Participant parsing
 # ---------------------------------------------------------------------------
 
@@ -123,7 +97,7 @@ def _parse_participant_line(line: str) -> Optional[Participant]:
         if not is_declaration(line, keyword):
             continue
 
-        rest = line[len(keyword):].strip()
+        rest = strip_keyword(line, keyword)
         if not rest:
             return None
 
@@ -306,7 +280,7 @@ def _parse_block_body(
     while i < len(lines):
         line = lines[i].strip()
 
-        if not line or line.startswith('%%'):
+        if is_skip_line(line):
             i += 1
             continue
 
@@ -497,7 +471,7 @@ def _try_parse_block(
         bi = i + 1
         while bi < len(lines):
             bline = lines[bi].strip()
-            if not bline or bline.startswith('%%'):
+            if is_skip_line(bline):
                 bi += 1
                 continue
             if bline.lower() == 'end':
@@ -560,13 +534,13 @@ def _parse_line_item(line: str, diagram: SequenceDiagram) -> Optional[Any]:
 
     # Activation / deactivation
     if is_declaration(line, 'activate'):
-        pid = line[len('activate'):].strip()
+        pid = strip_keyword(line, 'activate')
         act = Activation(participant=pid, is_activate=True)
         diagram.add_activation(act)
         return act
 
     if is_declaration(line, 'deactivate'):
-        pid = line[len('deactivate'):].strip()
+        pid = strip_keyword(line, 'deactivate')
         act = Activation(participant=pid, is_activate=False)
         diagram.add_activation(act)
         return act
@@ -635,7 +609,7 @@ def parse_sequence(text: str, line_ending: LineEnding) -> SequenceDiagram:
     while i < len(lines):
         line = lines[i].strip()
 
-        if not line or line.startswith('%%'):
+        if is_skip_line(line):
             i += 1
             continue
 
@@ -653,7 +627,7 @@ def parse_sequence(text: str, line_ending: LineEnding) -> SequenceDiagram:
 
         # Participant / actor declarations (handle multi-line @{...} syntax)
         if '@{' in line:
-            full_stmt, next_i = _accumulate_braces(lines, i)
+            full_stmt, next_i = accumulate_brackets(lines, i)
             p = _parse_participant_line(full_stmt)
             if p:
                 diagram.participants[p.id] = p

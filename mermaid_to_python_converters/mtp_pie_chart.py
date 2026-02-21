@@ -11,6 +11,8 @@ from mermaid.base import LineEnding
 from mermaid_to_python_converters.mtp_common import (
     is_declaration,
     try_parse_directive,
+    is_skip_line,
+    strip_quotes,
 )
 
 
@@ -39,11 +41,7 @@ def _parse_pie_declaration(line: str, diagram: PieChart) -> None:
     # Check for title
     title_match = re.match(r'title\s+(.+)', rest, re.IGNORECASE)
     if title_match:
-        title = title_match.group(1).strip()
-        # Strip surrounding quotes if present
-        if len(title) >= 2 and title[0] == '"' and title[-1] == '"':
-            title = title[1:-1]
-        diagram.title = title
+        diagram.title = strip_quotes(title_match.group(1).strip())
 
 
 def _parse_pie_slice(line: str) -> Optional[tuple]:
@@ -76,11 +74,7 @@ def parse_pie_chart(text: str, line_ending: LineEnding) -> PieChart:
 
     for raw_line in text.split("\n"):
         line = raw_line.strip()
-        if not line:
-            continue
-
-        # Skip comments (preserved from raw input by python_to_mermaid.py)
-        if line.startswith("%%"):
+        if is_skip_line(line):
             continue
 
         # Parse the declaration line
@@ -91,10 +85,7 @@ def parse_pie_chart(text: str, line_ending: LineEnding) -> PieChart:
         # Title on its own line
         title = try_parse_directive(line, "title")
         if title is not None:
-            # Strip surrounding quotes if present
-            if len(title) >= 2 and title[0] == '"' and title[-1] == '"':
-                title = title[1:-1]
-            diagram.title = title
+            diagram.title = strip_quotes(title)
             diagram.title_inline = False
             continue
 

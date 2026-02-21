@@ -15,7 +15,11 @@ from mermaid.flowchart import (
 )
 from mermaid.base import LineEnding
 
-from mermaid_to_python_converters.mtp_common import is_declaration
+from mermaid_to_python_converters.mtp_common import (
+    is_declaration,
+    is_skip_line,
+    accumulate_brackets,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -120,30 +124,6 @@ def _find_arrow(text: str):
     if m:
         return m.start(), m.end(), m.group(1)
     return None
-
-
-def _accumulate_statement(lines: List[str], start_idx: int):
-    """
-    Accumulate a potentially multi-line statement by tracking bracket depth.
-
-    Returns ``(accumulated_text_stripped, next_index)``.
-    """
-    first = lines[start_idx]
-    depth = sum(1 for c in first if c in '([{') - sum(1 for c in first if c in ')]}')
-
-    if depth <= 0:
-        return first.strip(), start_idx + 1
-
-    parts = [first]
-    idx = start_idx + 1
-    while idx < len(lines) and depth > 0:
-        line = lines[idx]
-        depth += sum(1 for c in line if c in '([{') - sum(1 for c in line if c in ')]}')
-        parts.append(line)
-        idx += 1
-
-    result = '\n'.join(parts)
-    return result.strip(), idx
 
 
 def _ensure_node(node_id, shape, label, class_name, diagram: Flowchart):
@@ -279,7 +259,7 @@ def parse_flowchart(text: str, line_ending: LineEnding) -> Flowchart:
     while i < len(lines):
         line = lines[i].strip()
 
-        if not line or line.startswith("%%"):
+        if is_skip_line(line):
             i += 1
             continue
 
@@ -358,13 +338,13 @@ def parse_flowchart(text: str, line_ending: LineEnding) -> Flowchart:
 
         # ---- @{...} syntax (new-style nodes, edge styling — pass through) ----
         if '@{' in line:
-            full_stmt, next_i = _accumulate_statement(lines, i)
+            full_stmt, next_i = accumulate_brackets(lines, i, joiner='\n')
             current_items.append(("raw", full_stmt.strip()))
             i = next_i
             continue
 
         # ---- Accumulate multi-line statement and parse ----
-        full_stmt, next_i = _accumulate_statement(lines, i)
+        full_stmt, next_i = accumulate_brackets(lines, i, joiner='\n')
         _parse_statement(full_stmt, diagram, current_items)
         i = next_i
 

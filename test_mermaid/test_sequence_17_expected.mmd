@@ -1,0 +1,8 @@
+sequenceDiagram
+    participant Alice@{ "type": "control" }
+    participant Bob@{ "type": "boundary", "alias": "Bob API" }
+    participant Charlie@{ "type": "database" }
+    Alice->>Bob: Request
+    Bob->>Charlie: Query
+    Charlie-->>Bob: Result
+    Bob-->>Alice: Response

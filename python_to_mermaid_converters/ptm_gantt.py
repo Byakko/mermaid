@@ -6,8 +6,6 @@ from typing import List
 
 from mermaid import GanttChart, GanttTask, DateRange
 
-from python_to_mermaid_converters.ptm_common import join_lines, render_config
-
 
 def render_gantt_task(task: GanttTask) -> str:
     """

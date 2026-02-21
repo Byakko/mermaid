@@ -11,6 +11,7 @@ from mermaid_to_python_converters.mtp_common import (
     try_parse_directive,
     try_parse_section,
     is_declaration,
+    is_skip_line,
     dayjs_to_strptime,
     is_date,
     is_duration,
@@ -203,11 +204,7 @@ def parse_gantt(text: str, line_ending: LineEnding) -> GanttChart:
 
     for raw_line in text.split("\n"):
         line = raw_line.strip()
-        if not line:
-            continue
-
-        # Skip comments (preserved from raw input by python_to_mermaid.py)
-        if line.startswith("%%"):
+        if is_skip_line(line):
             continue
 
         if is_declaration(line, "gantt"):

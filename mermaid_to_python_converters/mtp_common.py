@@ -120,44 +120,64 @@ def detect_diagram_type(text: str) -> str:
 
 
 # =============================================================================
-# Text Preprocessing
+# Small Helpers
 # =============================================================================
 
-def preprocess_text(text: str) -> List[str]:
+def is_skip_line(line: str) -> bool:
+    """Return True if *line* is empty or a Mermaid comment (``%%``)."""
+    return not line or line.startswith("%%")
+
+
+def strip_quotes(s: str) -> str:
+    """Remove surrounding double-quotes from *s*, if present."""
+    if len(s) >= 2 and s[0] == '"' and s[-1] == '"':
+        return s[1:-1]
+    return s
+
+
+def strip_keyword(line: str, keyword: str) -> str:
+    """Return the text after *keyword* at the start of *line*, stripped."""
+    return line[len(keyword):].strip()
+
+
+def split_colon_parts(line: str) -> List[str]:
+    """Split *line* on ``':'`` and strip each part."""
+    return [p.strip() for p in line.split(':')]
+
+
+def accumulate_brackets(
+    lines: List[str],
+    start_idx: int,
+    open_chars: str = '({[',
+    close_chars: str = ')}]',
+    joiner: str = ' ',
+) -> Tuple[str, int]:
     """
-    Preprocess Mermaid text before parsing.
+    Accumulate a potentially multi-line statement by tracking bracket depth.
 
     Args:
-        text: Raw Mermaid text
+        joiner: String used to join accumulated lines (``' '`` for most
+                parsers; ``'\\n'`` for flowchart to preserve multi-line labels).
 
-    Returns:
-        List of non-empty, non-comment lines
+    Returns ``(accumulated_text_stripped, next_index)``.
     """
-    lines = []
-    for line in text.split("\n"):
-        # Remove leading/trailing whitespace
-        line = line.strip()
-        # Skip empty lines
-        if not line:
-            continue
-        # Skip comment lines
-        if line.startswith("%%"):
-            continue
-        lines.append(line)
-    return lines
+    first = lines[start_idx]
+    depth = sum(1 for c in first if c in open_chars) - sum(1 for c in first if c in close_chars)
 
+    if depth <= 0:
+        return first.strip(), start_idx + 1
 
-def parse_indent(line: str) -> int:
-    """
-    Parse the indentation level of a line (number of leading spaces).
+    parts = [first]
+    idx = start_idx + 1
+    while idx < len(lines) and depth > 0:
+        line = lines[idx]
+        depth += sum(1 for c in line if c in open_chars) - sum(1 for c in line if c in close_chars)
+        parts.append(line)
+        idx += 1
 
-    Args:
-        line: Line to parse
-
-    Returns:
-        Number of leading spaces (divided by 2 for Mermaid levels)
-    """
-    return len(line) - len(line.lstrip())
+    if joiner == ' ':
+        return joiner.join(p.strip() for p in parts), idx
+    return joiner.join(parts).strip(), idx
 
 
 # =============================================================================

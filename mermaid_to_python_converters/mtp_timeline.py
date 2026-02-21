@@ -11,6 +11,8 @@ from mermaid_to_python_converters.mtp_common import (
     is_declaration,
     try_parse_directive,
     try_parse_section,
+    is_skip_line,
+    split_colon_parts,
 )
 
 
@@ -29,7 +31,7 @@ def _parse_period_line(line: str) -> Optional[TimePeriod]:
     if ':' not in line:
         return None
 
-    parts = [p.strip() for p in line.split(':')]
+    parts = split_colon_parts(line)
     if len(parts) < 2:
         return None
 
@@ -75,7 +77,7 @@ def parse_timeline(text: str, line_ending: LineEnding) -> Timeline:
     for raw_line in text.split("\n"):
         line = raw_line.strip()
 
-        if not line or line.startswith("%%"):
+        if is_skip_line(line):
             continue
 
         if is_declaration(line, "timeline"):
