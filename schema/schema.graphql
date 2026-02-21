@@ -1,0 +1,376 @@
+# Mermaid (and compatible diagram format) AST Schema
+# =====================================================
+#
+# This schema defines the canonical syntactic AST for diagram types.
+# It is language-agnostic and serves as the source of truth for:
+#
+#   - Parsers  (Mermaid, MS Project, …) → emit conforming JSON
+#   - Validators → check JSON against this schema + semantic rules
+#   - Renderers  → consume JSON to produce any target format
+#
+# Design principles
+# -----------------
+#   * kind: ElementKind! on every node — strongly typed discriminator,
+#     never a free string.  Enables exhaustive switching in consumers.
+#   * Ordering preserved — every ordered collection is an array.
+#   * Comments are union members — stand-alone comments can appear at
+#     any position inside an element array, not forced to a fixed line.
+#   * Trailing/inline comments are a field on the annotated element.
+#   * Start and end conditions are always explicit — ImplicitStart /
+#     ImplicitEnd replace null so the absence of a constraint is modelled.
+#   * Dates are strongly typed — AbsoluteDate / AbsoluteDateTime /
+#     TimeOfDay rather than raw strings.
+#   * Durations use ISO 8601 (P30D, PT24H, P1W).
+#   * One document = one diagram.
+#   * Frontmatter is stored as a raw unparsed string.
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Document root
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+Top-level document.  Wraps optional frontmatter and exactly one diagram.
+"""
+type Document {
+  version:     String    # schema version, for forward compatibility
+  frontmatter: String    # raw YAML text between --- markers, unparsed
+  diagram:     DiagramNode!
+}
+
+"""
+Union of all supported diagram types.
+Add new members here as diagram types are implemented.
+"""
+union DiagramNode =
+    GanttDiagram
+  # | FlowchartDiagram  (future)
+  # | SequenceDiagram   (future)
+  # | PieChartDiagram   (future)
+  # | TimelineDiagram   (future)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Scalars
+# ═══════════════════════════════════════════════════════════════════════════════
+
+scalar Date         # ISO 8601 date only:     "2024-01-01"
+scalar DateTime     # ISO 8601 date + time:   "2024-01-01T09:00:00Z"
+scalar Time         # ISO 8601 time only:     "17:49:00"
+scalar ISODuration  # ISO 8601 duration:      "P30D" | "PT24H" | "P1W2D"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ElementKind enum — the discriminator for every node in the AST
+# ═══════════════════════════════════════════════════════════════════════════════
+
+enum ElementKind {
+  # ── Shared ──────────────────────────────────────
+  COMMENT
+
+  # ── Date / time value types ──────────────────────
+  ABSOLUTE_DATE       # calendar date only  (Date scalar)
+  ABSOLUTE_DATETIME   # full date + time    (DateTime scalar)
+  TIME_OF_DAY         # time of day only    (Time scalar)
+  RELATIVE_DURATION   # an amount of time   (ISODuration scalar)
+
+  # ── Dependency / constraint value types ──────────
+  IMPLICIT_START      # no start constraint specified in source
+  IMPLICIT_END        # no end constraint specified in source
+  CONSTRAINT_REF      # dependency on one or more named tasks
+
+  # ── Gantt structural types ────────────────────────
+  GANTT_DIAGRAM
+  GANTT_SECTION
+  GANTT_TASK
+
+  # ── Gantt config value types ──────────────────────
+  EXCLUDE_ENTRY
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Interfaces
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+Every node in the AST carries a kind discriminator.
+Value types (dates, durations, refs) implement this interface directly.
+"""
+interface ASTNode {
+  kind: ElementKind!
+}
+
+"""
+Structural diagram elements: things that appear in the diagram as named
+nodes, can be referenced by ID, and may carry a trailing inline comment.
+Extends ASTNode.
+"""
+interface DiagramElement implements ASTNode {
+  kind:             ElementKind!
+  id:               ID
+  trailing_comment: String
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Comment
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+A stand-alone comment line.
+  Mermaid syntax: %% comment text
+
+Can appear as a member of any element-array union so it can be placed at any
+position in the ordered list without being bound to a specific line number.
+Trailing/inline comments on other elements are handled by the
+trailing_comment field on that element instead.
+"""
+type Comment implements DiagramElement & ASTNode {
+  kind:             ElementKind!  # always COMMENT
+  id:               ID
+  trailing_comment: String
+  text:             String!
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Date / time value types
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+A calendar date with no time component.
+Example: "2024-01-01"
+Parsers convert source-format date strings (per the diagram's dateFormat
+directive) into ISO 8601 before storage.
+"""
+type AbsoluteDate implements ASTNode {
+  kind:  ElementKind!  # always ABSOLUTE_DATE
+  value: Date!
+}
+
+"""
+A full date + time instant.
+Example: "2024-01-01T09:00:00Z"
+"""
+type AbsoluteDateTime implements ASTNode {
+  kind:  ElementKind!  # always ABSOLUTE_DATETIME
+  value: DateTime!
+}
+
+"""
+A time of day with no date component.
+Used by time-axis Gantt charts whose dateFormat is HH:mm.
+Example: "17:49:00"
+"""
+type TimeOfDay implements ASTNode {
+  kind:  ElementKind!  # always TIME_OF_DAY
+  value: Time!
+}
+
+"""
+An amount of time expressed as an ISO 8601 duration string.
+Examples: "P30D" (30 days), "PT24H" (24 hours), "P1W" (1 week), "P0D"
+"""
+type RelativeDuration implements ASTNode {
+  kind:  ElementKind!  # always RELATIVE_DURATION
+  value: ISODuration!
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Implicit start / end markers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+No start constraint was present in the source.
+Semantics are left to the scheduler or renderer — typically the element
+begins immediately after the previous element in the list.
+"""
+type ImplicitStart implements ASTNode {
+  kind: ElementKind!  # always IMPLICIT_START
+}
+
+"""
+No end constraint was present in the source.
+Semantics are left to the scheduler or renderer.
+"""
+type ImplicitEnd implements ASTNode {
+  kind: ElementKind!  # always IMPLICIT_END
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Dependency / constraint reference
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+Expresses a scheduling dependency on one or more named tasks.
+
+dependency_type encodes the CPM (Critical Path Method) relationship:
+  FS — Finish-to-Start:  this side begins after referenced task(s) finish
+                         Mermaid: "after <id>"
+  SS — Start-to-Start:   this side begins when referenced task(s) begin
+  FF — Finish-to-Finish: this side ends when referenced task(s) end
+  SF — Start-to-Finish:  this side ends when referenced task(s) begin
+                         Mermaid: "until <id>"
+
+The field that holds this value determines the dependent side:
+  start: ConstraintRef → this task's START is constrained
+  end:   ConstraintRef → this task's END   is constrained
+
+combination applies when task_ids contains more than one entry:
+  ALL_OF — wait for / align with all referenced tasks (Mermaid default)
+  ANY_OF — wait for / align with the first to satisfy the condition
+"""
+type ConstraintRef implements ASTNode {
+  kind:            ElementKind!        # always CONSTRAINT_REF
+  task_ids:        [ID!]!
+  dependency_type: DependencyType!
+  combination:     DependencyCombination!
+}
+
+enum DependencyType {
+  FS  # Finish-to-Start  (most common; Mermaid "after")
+  SS  # Start-to-Start
+  FF  # Finish-to-Finish
+  SF  # Start-to-Finish  (Mermaid "until")
+}
+
+enum DependencyCombination {
+  ALL_OF  # all referenced tasks must satisfy the anchor condition
+  ANY_OF  # the first referenced task to satisfy the condition wins
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Start / End condition unions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""The start point of a task or event."""
+union StartCondition =
+    ImplicitStart
+  | AbsoluteDate
+  | AbsoluteDateTime
+  | TimeOfDay
+  | ConstraintRef
+
+"""The end point of a task or event."""
+union EndCondition =
+    ImplicitEnd
+  | AbsoluteDate
+  | AbsoluteDateTime
+  | TimeOfDay
+  | RelativeDuration
+  | ConstraintRef
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Gantt diagram
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+A complete Gantt chart.
+
+Elements may be sections (which group tasks), sectionless tasks, or
+stand-alone comments.  The order of elements is significant.
+"""
+type GanttDiagram implements DiagramElement & ASTNode {
+  kind:             ElementKind!          # always GANTT_DIAGRAM
+  id:               ID
+  trailing_comment: String
+  title:            String
+  date_format:      String                # raw dateFormat value (day.js tokens)
+  axis_format:      String                # raw axisFormat value (strftime tokens)
+  tick_interval:    String                # raw tickInterval value (e.g. "1day", "1week", "1month")
+  excludes:         [ExcludeEntry!]
+  weekend:          WeekendDay
+  elements:         [GanttTopLevelElement!]!
+}
+
+"""
+Elements that may appear at the top level of a Gantt chart.
+Sections contain their own element lists; sectionless tasks and comments
+appear directly here.
+"""
+union GanttTopLevelElement =
+    GanttSection
+  | GanttTask
+  | Comment
+
+"""
+A named group of tasks within a Gantt chart.
+"""
+type GanttSection implements DiagramElement & ASTNode {
+  kind:             ElementKind!          # always GANTT_SECTION
+  id:               ID
+  trailing_comment: String
+  name:             String!
+  elements:         [GanttSectionElement!]!
+}
+
+"""Elements that may appear inside a Gantt section."""
+union GanttSectionElement =
+    GanttTask
+  | Comment
+
+"""
+A single Gantt chart task.
+
+Milestones (zero-duration markers) and vert markers (vertical reference
+lines) are represented as tasks with MILESTONE or VERT in their statuses
+array — this matches how Mermaid encodes them syntactically.
+
+statuses preserves the original order of status keywords in the source.
+An empty list means no status keywords were present.
+"""
+type GanttTask implements DiagramElement & ASTNode {
+  kind:         ElementKind!       # always GANTT_TASK
+  id:           ID
+  trailing_comment: String
+  name:         String!
+  element_type: GanttElementType!  # TASK | MILESTONE | VERT
+  statuses:     [GanttTaskStatus!]! # work state / styling flags: DONE, ACTIVE, CRIT
+  start:        StartCondition!
+  end:          EndCondition!
+}
+
+"""
+The structural type of a Gantt element.
+Separates what kind of thing an element IS from its work state (statuses).
+"""
+enum GanttElementType {
+  TASK       # regular scheduled bar (the common case)
+  MILESTONE  # zero-duration point marker (diamond in most renderers)
+  VERT       # vertical reference line; duration acts as a spacing offset
+             # pushing subsequent implicit-start elements forward in time
+}
+
+"""Work state and styling flags. Can be combined (e.g. CRIT + DONE)."""
+enum GanttTaskStatus {
+  DONE    # work is complete
+  ACTIVE  # work is in progress
+  CRIT    # on the critical path; rendered with urgency styling
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Gantt excludes
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+One token from the space-separated excludes directive.
+Example:  excludes weekends monday 2024-12-25
+  → [{WEEKENDS}, {DAY_NAME, "monday"}, {DATE, "2024-12-25"}]
+"""
+type ExcludeEntry implements ASTNode {
+  kind:  ElementKind!  # always EXCLUDE_ENTRY
+  type:  ExcludeKind!
+  value: String        # null for WEEKENDS; date string or day name otherwise
+}
+
+enum ExcludeKind {
+  WEEKENDS  # the literal keyword "weekends"
+  DATE      # a specific date matching the diagram's dateFormat
+  DAY_NAME  # a weekday name, e.g. "monday"
+}
+
+"""Override which days are treated as the weekend."""
+enum WeekendDay {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}

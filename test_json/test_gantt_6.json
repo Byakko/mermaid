@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "frontmatter": null,
+  "diagram": {
+    "kind": "GANTT_DIAGRAM",
+    "id": null,
+    "trailing_comment": null,
+    "title": null,
+    "date_format": "HH:mm",
+    "axis_format": "%H:%M",
+    "excludes": null,
+    "weekend": null,
+    "elements": [
+      {
+        "kind": "GANTT_TASK",
+        "id": "v1",
+        "trailing_comment": null,
+        "name": "Initial vert",
+        "element_type": "VERT",
+        "statuses": [],
+        "start": {
+          "kind": "TIME_OF_DAY",
+          "value": "17:30:00"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "PT2M"
+        }
+      },
+      {
+        "kind": "GANTT_TASK",
+        "id": null,
+        "trailing_comment": null,
+        "name": "Task A",
+        "element_type": "TASK",
+        "statuses": [],
+        "start": {
+          "kind": "IMPLICIT_START"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "PT3M"
+        }
+      },
+      {
+        "kind": "GANTT_TASK",
+        "id": null,
+        "trailing_comment": null,
+        "name": "Task B",
+        "element_type": "TASK",
+        "statuses": [],
+        "start": {
+          "kind": "IMPLICIT_START"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "PT8M"
+        }
+      },
+      {
+        "kind": "GANTT_TASK",
+        "id": "v2",
+        "trailing_comment": null,
+        "name": "Final vert",
+        "element_type": "VERT",
+        "statuses": [],
+        "start": {
+          "kind": "TIME_OF_DAY",
+          "value": "17:58:00"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "PT4M"
+        }
+      }
+    ]
+  }
+}

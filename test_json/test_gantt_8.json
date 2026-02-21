@@ -1,0 +1,83 @@
+{
+  "version": "1.0",
+  "frontmatter": null,
+  "diagram": {
+    "kind": "GANTT_DIAGRAM",
+    "id": null,
+    "trailing_comment": null,
+    "title": "A Gantt Diagram",
+    "date_format": "YYYY-MM-DD",
+    "axis_format": null,
+    "excludes": null,
+    "weekend": null,
+    "elements": [
+      {
+        "kind": "COMMENT",
+        "id": null,
+        "trailing_comment": null,
+        "text": "This is a comment"
+      },
+      {
+        "kind": "GANTT_SECTION",
+        "id": null,
+        "trailing_comment": null,
+        "name": "Section",
+        "elements": [
+          {
+            "kind": "GANTT_TASK",
+            "id": "a1",
+            "trailing_comment": null,
+            "name": "A task",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": { "kind": "ABSOLUTE_DATE", "value": "2014-01-01" },
+            "end":   { "kind": "RELATIVE_DURATION", "value": "P30D" }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Another task",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": {
+              "kind": "CONSTRAINT_REF",
+              "task_ids": ["a1"],
+              "dependency_type": "FS",
+              "combination": "ALL_OF"
+            },
+            "end": { "kind": "RELATIVE_DURATION", "value": "P20D" }
+          }
+        ]
+      },
+      {
+        "kind": "GANTT_SECTION",
+        "id": null,
+        "trailing_comment": null,
+        "name": "Another",
+        "elements": [
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Task in Another",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": { "kind": "ABSOLUTE_DATE", "value": "2014-01-12" },
+            "end":   { "kind": "RELATIVE_DURATION", "value": "P12D" }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "another task",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": { "kind": "IMPLICIT_START" },
+            "end":   { "kind": "RELATIVE_DURATION", "value": "P24D" }
+          }
+        ]
+      }
+    ]
+  }
+}

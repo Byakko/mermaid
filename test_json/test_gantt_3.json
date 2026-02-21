@@ -1,0 +1,94 @@
+{
+  "version": "1.0",
+  "frontmatter": null,
+  "diagram": {
+    "kind": "GANTT_DIAGRAM",
+    "id": null,
+    "trailing_comment": null,
+    "title": null,
+    "date_format": null,
+    "axis_format": null,
+    "excludes": null,
+    "weekend": null,
+    "elements": [
+      {
+        "kind": "GANTT_TASK",
+        "id": "a",
+        "trailing_comment": null,
+        "name": "apple",
+        "element_type": "TASK",
+        "statuses": [],
+        "start": {
+          "kind": "ABSOLUTE_DATE",
+          "value": "2017-07-20"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "P1W"
+        }
+      },
+      {
+        "kind": "GANTT_TASK",
+        "id": "b",
+        "trailing_comment": null,
+        "name": "banana",
+        "element_type": "TASK",
+        "statuses": [
+          "CRIT"
+        ],
+        "start": {
+          "kind": "ABSOLUTE_DATE",
+          "value": "2017-07-23"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "P1D"
+        }
+      },
+      {
+        "kind": "GANTT_TASK",
+        "id": "c",
+        "trailing_comment": null,
+        "name": "cherry",
+        "element_type": "TASK",
+        "statuses": [
+          "ACTIVE"
+        ],
+        "start": {
+          "kind": "CONSTRAINT_REF",
+          "task_ids": [
+            "b",
+            "a"
+          ],
+          "dependency_type": "FS",
+          "combination": "ALL_OF"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "P1D"
+        }
+      },
+      {
+        "kind": "GANTT_TASK",
+        "id": "d",
+        "trailing_comment": null,
+        "name": "kiwi",
+        "element_type": "TASK",
+        "statuses": [],
+        "start": {
+          "kind": "ABSOLUTE_DATE",
+          "value": "2017-07-20"
+        },
+        "end": {
+          "kind": "CONSTRAINT_REF",
+          "task_ids": [
+            "b",
+            "c"
+          ],
+          "dependency_type": "SF",
+          "combination": "ALL_OF"
+        }
+      }
+    ]
+  }
+}

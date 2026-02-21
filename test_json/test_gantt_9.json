@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "frontmatter": null,
+  "diagram": {
+    "kind": "GANTT_DIAGRAM",
+    "id": null,
+    "trailing_comment": null,
+    "title": "Timeline - Gantt Sampler",
+    "date_format": "YYYY",
+    "axis_format": "%y",
+    "tick_interval": "1month",
+    "excludes": null,
+    "weekend": null,
+    "elements": []
+  }
+}

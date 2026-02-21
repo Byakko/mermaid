@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "frontmatter": null,
+  "diagram": {
+    "kind": "GANTT_DIAGRAM",
+    "id": null,
+    "trailing_comment": null,
+    "title": null,
+    "date_format": "HH:mm",
+    "axis_format": "%H:%M",
+    "excludes": null,
+    "weekend": null,
+    "elements": [
+      {
+        "kind": "GANTT_TASK",
+        "id": "m1",
+        "trailing_comment": null,
+        "name": "Initial milestone",
+        "element_type": "MILESTONE",
+        "statuses": [],
+        "start": {
+          "kind": "TIME_OF_DAY",
+          "value": "17:49:00"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "PT2M"
+        }
+      },
+      {
+        "kind": "GANTT_TASK",
+        "id": null,
+        "trailing_comment": null,
+        "name": "Task A",
+        "element_type": "TASK",
+        "statuses": [],
+        "start": {
+          "kind": "IMPLICIT_START"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "PT10M"
+        }
+      },
+      {
+        "kind": "GANTT_TASK",
+        "id": null,
+        "trailing_comment": null,
+        "name": "Task B",
+        "element_type": "TASK",
+        "statuses": [],
+        "start": {
+          "kind": "IMPLICIT_START"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "PT5M"
+        }
+      },
+      {
+        "kind": "GANTT_TASK",
+        "id": "m2",
+        "trailing_comment": null,
+        "name": "Final milestone",
+        "element_type": "MILESTONE",
+        "statuses": [],
+        "start": {
+          "kind": "TIME_OF_DAY",
+          "value": "18:08:00"
+        },
+        "end": {
+          "kind": "RELATIVE_DURATION",
+          "value": "PT4M"
+        }
+      }
+    ]
+  }
+}

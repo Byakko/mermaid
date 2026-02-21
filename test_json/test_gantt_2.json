@@ -1,0 +1,375 @@
+{
+  "version": "1.0",
+  "frontmatter": null,
+  "diagram": {
+    "kind": "GANTT_DIAGRAM",
+    "id": null,
+    "trailing_comment": null,
+    "title": "Adding GANTT diagram functionality to mermaid",
+    "date_format": "YYYY-MM-DD",
+    "axis_format": null,
+    "excludes": [
+      {
+        "kind": "EXCLUDE_ENTRY",
+        "type": "WEEKENDS",
+        "value": null
+      }
+    ],
+    "weekend": null,
+    "elements": [
+      {
+        "kind": "COMMENT",
+        "id": null,
+        "trailing_comment": null,
+        "text": "(`excludes` accepts specific dates in YYYY-MM-DD format, days of the week (\"sunday\") or \"weekends\", but not the word \"weekdays\".)"
+      },
+      {
+        "kind": "GANTT_SECTION",
+        "id": null,
+        "trailing_comment": null,
+        "name": "A section",
+        "elements": [
+          {
+            "kind": "GANTT_TASK",
+            "id": "des1",
+            "trailing_comment": null,
+            "name": "Completed task",
+            "element_type": "TASK",
+            "statuses": [
+              "DONE"
+            ],
+            "start": {
+              "kind": "ABSOLUTE_DATE",
+              "value": "2014-01-06"
+            },
+            "end": {
+              "kind": "ABSOLUTE_DATE",
+              "value": "2014-01-08"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": "des2",
+            "trailing_comment": null,
+            "name": "Active task",
+            "element_type": "TASK",
+            "statuses": [
+              "ACTIVE"
+            ],
+            "start": {
+              "kind": "ABSOLUTE_DATE",
+              "value": "2014-01-09"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P3D"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": "des3",
+            "trailing_comment": null,
+            "name": "Future task",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": {
+              "kind": "CONSTRAINT_REF",
+              "task_ids": [
+                "des2"
+              ],
+              "dependency_type": "FS",
+              "combination": "ALL_OF"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P5D"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": "des4",
+            "trailing_comment": null,
+            "name": "Future task2",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": {
+              "kind": "CONSTRAINT_REF",
+              "task_ids": [
+                "des3"
+              ],
+              "dependency_type": "FS",
+              "combination": "ALL_OF"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P5D"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "GANTT_SECTION",
+        "id": null,
+        "trailing_comment": null,
+        "name": "Critical tasks",
+        "elements": [
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Completed task in the critical line",
+            "element_type": "TASK",
+            "statuses": [
+              "CRIT",
+              "DONE"
+            ],
+            "start": {
+              "kind": "ABSOLUTE_DATE",
+              "value": "2014-01-06"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "PT24H"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Implement parser and jison",
+            "element_type": "TASK",
+            "statuses": [
+              "CRIT",
+              "DONE"
+            ],
+            "start": {
+              "kind": "CONSTRAINT_REF",
+              "task_ids": [
+                "des1"
+              ],
+              "dependency_type": "FS",
+              "combination": "ALL_OF"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P2D"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Create tests for parser",
+            "element_type": "TASK",
+            "statuses": [
+              "CRIT",
+              "ACTIVE"
+            ],
+            "start": {
+              "kind": "IMPLICIT_START"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P3D"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Future task in critical line",
+            "element_type": "TASK",
+            "statuses": [
+              "CRIT"
+            ],
+            "start": {
+              "kind": "IMPLICIT_START"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P5D"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Create tests for renderer",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": {
+              "kind": "IMPLICIT_START"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P2D"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Add to mermaid",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": {
+              "kind": "IMPLICIT_START"
+            },
+            "end": {
+              "kind": "CONSTRAINT_REF",
+              "task_ids": [
+                "isadded"
+              ],
+              "dependency_type": "SF",
+              "combination": "ALL_OF"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": "isadded",
+            "trailing_comment": null,
+            "name": "Functionality added",
+            "element_type": "MILESTONE",
+            "statuses": [],
+            "start": {
+              "kind": "ABSOLUTE_DATE",
+              "value": "2014-01-25"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P0D"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "GANTT_SECTION",
+        "id": null,
+        "trailing_comment": null,
+        "name": "Documentation",
+        "elements": [
+          {
+            "kind": "GANTT_TASK",
+            "id": "a1",
+            "trailing_comment": null,
+            "name": "Describe gantt syntax",
+            "element_type": "TASK",
+            "statuses": [
+              "ACTIVE"
+            ],
+            "start": {
+              "kind": "CONSTRAINT_REF",
+              "task_ids": [
+                "des1"
+              ],
+              "dependency_type": "FS",
+              "combination": "ALL_OF"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P3D"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Add gantt diagram to demo page",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": {
+              "kind": "CONSTRAINT_REF",
+              "task_ids": [
+                "a1"
+              ],
+              "dependency_type": "FS",
+              "combination": "ALL_OF"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "PT20H"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": "doc1",
+            "trailing_comment": null,
+            "name": "Add another diagram to demo page",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": {
+              "kind": "CONSTRAINT_REF",
+              "task_ids": [
+                "a1"
+              ],
+              "dependency_type": "FS",
+              "combination": "ALL_OF"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "PT48H"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "GANTT_SECTION",
+        "id": null,
+        "trailing_comment": null,
+        "name": "Last section",
+        "elements": [
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Describe gantt syntax",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": {
+              "kind": "CONSTRAINT_REF",
+              "task_ids": [
+                "doc1"
+              ],
+              "dependency_type": "FS",
+              "combination": "ALL_OF"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P3D"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Add gantt diagram to demo page",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": {
+              "kind": "IMPLICIT_START"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "PT20H"
+            }
+          },
+          {
+            "kind": "GANTT_TASK",
+            "id": null,
+            "trailing_comment": null,
+            "name": "Add another diagram to demo page",
+            "element_type": "TASK",
+            "statuses": [],
+            "start": {
+              "kind": "IMPLICIT_START"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "PT48H"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
