@@ -11,7 +11,6 @@ from diagram_models.common import (
     ConstraintRef,
     ImplicitEnd,
     ImplicitStart,
-    RelativeDuration,
     TimeOfDay,
 )
 from diagram_models.gantt import (
@@ -32,12 +31,15 @@ def _render_start(start) -> dict:
     if isinstance(start, TimeOfDay):
         return {"kind": "TIME_OF_DAY", "value": start.value}
     if isinstance(start, ConstraintRef):
-        return {
+        d = {
             "kind": "CONSTRAINT_REF",
             "task_ids": start.task_ids,
             "dependency_type": start.dependency_type.value,
             "combination": start.combination.value,
         }
+        if start.lag is not None:
+            d["lag"] = start.lag
+        return d
     raise ValueError(f"Unknown start type: {type(start).__name__}")
 
 
@@ -50,15 +52,16 @@ def _render_end(end) -> dict:
         return {"kind": "ABSOLUTE_DATETIME", "value": end.value}
     if isinstance(end, TimeOfDay):
         return {"kind": "TIME_OF_DAY", "value": end.value}
-    if isinstance(end, RelativeDuration):
-        return {"kind": "RELATIVE_DURATION", "value": end.value}
     if isinstance(end, ConstraintRef):
-        return {
+        d = {
             "kind": "CONSTRAINT_REF",
             "task_ids": end.task_ids,
             "dependency_type": end.dependency_type.value,
             "combination": end.combination.value,
         }
+        if end.lag is not None:
+            d["lag"] = end.lag
+        return d
     raise ValueError(f"Unknown end type: {type(end).__name__}")
 
 
@@ -75,6 +78,12 @@ def _render_task(task: GanttTask) -> dict:
         d["id"] = task.id
     if task.trailing_comment is not None:
         d["trailing_comment"] = task.trailing_comment
+    if task.duration is not None:
+        d["duration"] = task.duration
+    if task.percent_complete is not None:
+        d["percent_complete"] = task.percent_complete
+    if task.uid is not None:
+        d["uid"] = task.uid
     return d
 
 

@@ -30,11 +30,15 @@
 
 """
 Top-level document.  Wraps optional frontmatter and exactly one diagram.
+ganttproject is populated only when the source was a GanttProject .gan file;
+it carries the application-level metadata required to faithfully reconstruct
+the file on export.
 """
 type Document {
-  version:     String    # schema version, for forward compatibility
-  frontmatter: String    # raw YAML text between --- markers, unparsed
-  diagram:     DiagramNode!
+  version:      String               # schema version, for forward compatibility
+  frontmatter:  String               # raw YAML text between --- markers, unparsed
+  diagram:      DiagramNode!
+  ganttproject: GanttProjectMetadata # present only when source is a .gan file
 }
 
 """
@@ -56,6 +60,7 @@ scalar Date         # ISO 8601 date only:     "2024-01-01"
 scalar DateTime     # ISO 8601 date + time:   "2024-01-01T09:00:00Z"
 scalar Time         # ISO 8601 time only:     "17:49:00"
 scalar ISODuration  # ISO 8601 duration:      "P30D" | "PT24H" | "P1W2D"
+                    # Negative prefix "-" is allowed to represent lead time: "-P1D"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ElementKind enum — the discriminator for every node in the AST
@@ -83,6 +88,9 @@ enum ElementKind {
 
   # ── Gantt config value types ──────────────────────
   GANTT_DIRECTIVE
+
+  # ── Source format metadata ────────────────────────
+  GANTT_PROJECT_METADATA  # GanttProject application metadata (.gan files)
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -220,6 +228,7 @@ type ConstraintRef implements ASTNode {
   task_ids:        [ID!]!
   dependency_type: DependencyType!
   combination:     DependencyCombination!
+  lag:             ISODuration         # positive = delay after anchor; negative = lead (overlap); null = zero lag
 }
 
 enum DependencyType {
@@ -252,7 +261,6 @@ union EndCondition =
   | AbsoluteDate
   | AbsoluteDateTime
   | TimeOfDay
-  | RelativeDuration
   | ConstraintRef
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -337,14 +345,17 @@ statuses preserves the original order of status keywords in the source.
 An empty list means no status keywords were present.
 """
 type GanttTask implements DiagramElement & ASTNode {
-  kind:         ElementKind!       # always GANTT_TASK
-  id:           ID
+  kind:             ElementKind!        # always GANTT_TASK
+  id:               ID
   trailing_comment: String
-  name:         String!
-  element_type: GanttElementType!  # TASK | MILESTONE | VERT
-  statuses:     [GanttTaskStatus!]! # work state / styling flags: DONE, ACTIVE, CRIT
-  start:        StartCondition!
-  end:          EndCondition!
+  name:             String!
+  element_type:     GanttElementType!  # TASK | MILESTONE | VERT
+  statuses:         [GanttTaskStatus!]! # work state / styling flags: DONE, ACTIVE, CRIT
+  start:            StartCondition!
+  duration:         ISODuration       # how long the task takes; null if unknown/unconstrained
+  end:              EndCondition!
+  percent_complete: Int               # 0-100; null means not specified
+  uid:              String            # GanttProject GUID; used for cross-file subproject references
 }
 
 """
@@ -365,3 +376,39 @@ enum GanttTaskStatus {
   CRIT    # on the critical path; rendered with urgency styling
 }
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Shared calendar types
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""A day of the week."""
+enum DayOfWeek {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Source format metadata
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+Application-level metadata from a GanttProject .gan file.
+
+Preserved so that a .gan file can be faithfully reconstructed on export.
+Fields that GanttProject regenerates automatically (UI state, divider
+positions, column widths, task UIDs) are excluded.
+
+working_days: the days treated as working days in the project calendar.
+  Default Mon-Fri; required for correct duration and lag calculations.
+"""
+type GanttProjectMetadata implements ASTNode {
+  kind:         ElementKind!  # always GANTT_PROJECT_METADATA
+  name:         String        # project name (may differ from diagram title)
+  locale:       String        # locale code, e.g. "en"
+  version:      String        # GanttProject version string, e.g. "3.3.3322"
+  working_days: [DayOfWeek!]  # ordered list of working days
+}

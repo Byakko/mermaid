@@ -26,10 +26,10 @@
           "value": "17:30:00"
         },
         "end": {
-          "kind": "RELATIVE_DURATION",
-          "value": "PT2M"
+          "kind": "IMPLICIT_END"
         },
-        "id": "v1"
+        "id": "v1",
+        "duration": "PT2M"
       },
       {
         "kind": "GANTT_TASK",
@@ -40,9 +40,9 @@
           "kind": "IMPLICIT_START"
         },
         "end": {
-          "kind": "RELATIVE_DURATION",
-          "value": "PT3M"
-        }
+          "kind": "IMPLICIT_END"
+        },
+        "duration": "PT3M"
       },
       {
         "kind": "GANTT_TASK",
@@ -53,9 +53,9 @@
           "kind": "IMPLICIT_START"
         },
         "end": {
-          "kind": "RELATIVE_DURATION",
-          "value": "PT8M"
-        }
+          "kind": "IMPLICIT_END"
+        },
+        "duration": "PT8M"
       },
       {
         "kind": "GANTT_TASK",
@@ -67,10 +67,10 @@
           "value": "17:58:00"
         },
         "end": {
-          "kind": "RELATIVE_DURATION",
-          "value": "PT4M"
+          "kind": "IMPLICIT_END"
         },
-        "id": "v2"
+        "id": "v2",
+        "duration": "PT4M"
       }
     ]
   }

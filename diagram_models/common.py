@@ -89,6 +89,10 @@ class ConstraintRef:
     """
     A scheduling dependency on one or more named tasks.
 
+    lag is an ISO 8601 duration string. Positive values add delay after the
+    anchor point; negative values (e.g. '-P1D') represent lead time (overlap).
+    None means zero lag.
+
     Examples:
       after a1        → ConstraintRef(["a1"], FS, ALL_OF)
       after a1 a2     → ConstraintRef(["a1", "a2"], FS, ALL_OF)
@@ -97,6 +101,7 @@ class ConstraintRef:
     task_ids: list[str]
     dependency_type: DependencyType
     combination: DependencyCombination
+    lag: Optional[str] = None
     kind: str = field(default="CONSTRAINT_REF", init=False)
 
 
@@ -136,6 +141,5 @@ EndCondition = Union[
     AbsoluteDate,
     AbsoluteDateTime,
     TimeOfDay,
-    RelativeDuration,
     ConstraintRef,
 ]

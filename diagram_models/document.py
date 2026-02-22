@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Union
 
-from .gantt import GanttDiagram
+from .gantt import GanttDiagram, GanttProjectMetadata
 
 
 # Union of all supported diagram types.
@@ -37,3 +37,4 @@ class Document:
     diagram: DiagramNode
     version: Optional[str] = None
     frontmatter: Optional[str] = None
+    ganttproject: Optional[GanttProjectMetadata] = None

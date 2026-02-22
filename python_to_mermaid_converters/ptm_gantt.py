@@ -17,7 +17,6 @@ from diagram_models.common import (
     DependencyType,
     ImplicitEnd,
     ImplicitStart,
-    RelativeDuration,
     TimeOfDay,
 )
 from diagram_models.gantt import (
@@ -108,8 +107,6 @@ def _render_start_value(start, date_format: str) -> str:
 def _render_end_value(end, date_format: str) -> str:
     if isinstance(end, (AbsoluteDate, TimeOfDay)):
         return _format_date_value(end.value, date_format)
-    if isinstance(end, RelativeDuration):
-        return _iso_dur_to_mermaid(end.value)
     if isinstance(end, ConstraintRef) and end.dependency_type == DependencyType.SF:
         return "until " + " ".join(end.task_ids)
     raise ValueError(f"Cannot render end condition: {end!r}")
@@ -140,8 +137,11 @@ def _render_task(task: GanttTask, date_format: str, indent: str) -> str:
     if not isinstance(task.start, ImplicitStart):
         tokens.append(_render_start_value(task.start, date_format))
 
-    # End (omitted for ImplicitEnd)
-    if not isinstance(task.end, ImplicitEnd):
+    # Duration (takes precedence; emitted when present)
+    if task.duration is not None:
+        tokens.append(_iso_dur_to_mermaid(task.duration))
+    elif not isinstance(task.end, ImplicitEnd):
+        # End constraint (only when no duration; omitted for ImplicitEnd)
         tokens.append(_render_end_value(task.end, date_format))
 
     return f"{indent}{task.name} :{', '.join(tokens)}"

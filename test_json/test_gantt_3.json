@@ -15,10 +15,10 @@
           "value": "2017-07-20"
         },
         "end": {
-          "kind": "RELATIVE_DURATION",
-          "value": "P1W"
+          "kind": "IMPLICIT_END"
         },
-        "id": "a"
+        "id": "a",
+        "duration": "P1W"
       },
       {
         "kind": "GANTT_TASK",
@@ -32,10 +32,10 @@
           "value": "2017-07-23"
         },
         "end": {
-          "kind": "RELATIVE_DURATION",
-          "value": "P1D"
+          "kind": "IMPLICIT_END"
         },
-        "id": "b"
+        "id": "b",
+        "duration": "P1D"
       },
       {
         "kind": "GANTT_TASK",
@@ -54,10 +54,10 @@
           "combination": "ALL_OF"
         },
         "end": {
-          "kind": "RELATIVE_DURATION",
-          "value": "P1D"
+          "kind": "IMPLICIT_END"
         },
-        "id": "c"
+        "id": "c",
+        "duration": "P1D"
       },
       {
         "kind": "GANTT_TASK",

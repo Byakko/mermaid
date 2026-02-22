@@ -1,23 +1,22 @@
 # Mermaid AST Pipeline
 
-A language-agnostic AST pipeline for Mermaid diagrams. Currently supports Gantt charts.
+A language-agnostic AST pipeline for diagram formats. Parse, convert, and render diagrams across multiple formats via a shared Python object model and JSON AST.
 
 ```
-.mmd text  <-->  diagram_models (Python)  <-->  AST JSON
+.mmd (Mermaid)  <-->  diagram_models (Python)  <-->  AST JSON  <-->  .gan (GanttProject)
 ```
-
-Every representation is interconvertible. Full round-trips in both directions are verified for all test cases.
 
 ---
 
-## Key Files
+## Supported Diagram Types
 
-| File / Directory | Purpose |
-|---|---|
-| `schema/schema.graphql` | GraphQL SDL — source of truth for the AST shape |
-| `diagram_models/` | Pure Python dataclasses mirroring the schema |
-| `test_json/test_gantt_*.json` | Hand-verified AST JSON for each test diagram |
-| `test_mermaid/test_gantt_*.mmd` | Corresponding Mermaid source files |
+| Diagram type | Mermaid | AST JSON | GanttProject .gan |
+|---|:---:|:---:|:---:|
+| Gantt        | read/write | read/write | read/write |
+| Flowchart    | read/write | — | — |
+| Sequence     | read/write | — | — |
+| Pie chart    | read/write | — | — |
+| Timeline     | read/write | — | — |
 
 ---
 
@@ -25,7 +24,7 @@ Every representation is interconvertible. Full round-trips in both directions ar
 
 ### Conversion
 
-Low-level entry points used by other scripts and importable as modules.
+Low-level converters. Each accepts/returns Python objects and is importable as a module.
 
 | Script | Input | Output |
 |---|---|---|
@@ -33,17 +32,20 @@ Low-level entry points used by other scripts and importable as modules.
 | `python_to_mermaid.py` | `Document` | Mermaid text |
 | `json_to_python.py` | AST JSON text | `Document` |
 | `python_to_json.py` | `Document` | AST JSON text |
+| `gan_to_python.py` | GanttProject `.gan` XML | `Document` |
+| `python_to_gan.py` | `Document` | GanttProject `.gan` XML |
 
 ### Sanitize
 
-Normalize formatting by round-tripping through Python objects. Accepts a file path, stdin, or interactive input; writes to a file or stdout.
+Normalize formatting by round-tripping through Python objects and back. Accepts a file path, stdin, or interactive input; writes to a file or stdout.
 
 | Script | Round-trip |
 |---|---|
 | `sanitize_json.py` | JSON → Python → JSON |
 | `sanitize_mermaid.py` | Mermaid → Python → JSON → Python → Mermaid |
+| `sanitize_gan.py` | `.gan` → Python → JSON → Python → `.gan` |
 
-All sanitize scripts support the same three I/O modes and flags:
+All sanitize scripts share the same I/O modes and flags:
 
 ```bash
 # Pipe from stdin, output to stdout
@@ -58,89 +60,48 @@ python sanitize_mermaid.py input.mmd output.mmd --line-ending crlf
 
 ### Validate
 
-Report pass/fail for each check; exit code 1 if anything fails.
+Report pass/fail for each pipeline step; exit code 1 if anything fails.
 
 | Script | Input | Checks |
 |---|---|---|
 | `validate_schema.py` | *(none)* | SDL structure; schema ↔ `diagram_models` alignment |
-| `validate_json.py` | JSON file | Pydantic validation; JSON → Python → JSON round-trip |
+| `validate_json.py` | `.json` file | Pydantic validation; JSON → Python → JSON round-trip |
 | `validate_mermaid.py` | `.mmd` file | Mermaid → Python → JSON pipeline; Pydantic validation; JSON round-trip |
+| `validate_gan.py` | `.gan` file | `.gan` → Python → JSON pipeline; Pydantic validation; JSON round-trip; `.gan` render |
 
 ---
 
 ## Converters
 
+Converter modules live in format-specific directories and are called by the top-level scripts above.
+
 | Directory | Purpose |
 |---|---|
-| `mermaid_to_python_converters/` | Diagram-type parsers: Mermaid text → Python objects |
-| `python_to_mermaid_converters/` | Diagram-type renderers: Python objects → Mermaid text |
-| `json_to_python_converters/` | Diagram-type parsers: JSON dict → Python objects |
-| `python_to_json_converters/` | Diagram-type renderers: Python objects → JSON dict |
+| `mermaid_to_python_converters/` | Mermaid text → Python objects |
+| `python_to_mermaid_converters/` | Python objects → Mermaid text |
+| `json_to_python_converters/` | AST JSON → Python objects |
+| `python_to_json_converters/` | Python objects → AST JSON |
+| `gan_to_python_converters/` | GanttProject `.gan` XML → Python objects |
+| `python_to_gan_converters/` | Python objects → GanttProject `.gan` XML |
 
 ---
 
-## Grand Round-Trip
+## Key Files
 
-```python
-from mermaid_to_python import mermaid_to_python
-from python_to_mermaid import python_to_mermaid
-from json_to_python import json_to_python
-from python_to_json import python_to_json
-
-# Mermaid -> Python -> JSON -> Python -> Mermaid
-doc  = mermaid_to_python(mmd_text)
-j    = python_to_json(doc)
-doc2 = json_to_python(j)
-out  = python_to_mermaid(doc2)   # semantically identical to mmd_text
-
-# JSON -> Python -> Mermaid -> Python -> JSON
-doc  = json_to_python(json_text)
-mmd  = python_to_mermaid(doc)
-doc2 = mermaid_to_python(mmd)
-out  = python_to_json(doc2)      # identical to json_text
-```
+| File / Directory | Purpose |
+|---|---|
+| `schema/schema.graphql` | GraphQL SDL — source of truth for the AST shape |
+| `diagram_models/` | Pure Python dataclasses mirroring the schema |
+| `test_json/test_gantt_*.json` | Hand-verified AST JSON for each Gantt test case |
+| `test_mermaid/test_gantt_*.mmd` | Corresponding Mermaid source files |
+| `test_ganttproject/test_gantt_1.gan` | GanttProject round-trip test file |
 
 ---
 
-## Design Decisions
+## Known Limitations
 
-### Header array instead of named directive fields
-
-`GanttDiagram` has a `header: list[GanttHeaderElement]` rather than separate `title`, `date_format`, `axis_format`, … fields.
-
-```json
-"header": [
-  { "kind": "GANTT_DIRECTIVE", "name": "TITLE",       "value": "A Gantt Diagram" },
-  { "kind": "COMMENT",         "text": "some note" },
-  { "kind": "GANTT_DIRECTIVE", "name": "DATE_FORMAT",  "value": "YYYY-MM-DD" }
-]
-```
-
-**Why:** Named nullable fields lose the distinction between "directive was absent" and "directive was present with no value" — a meaningful difference in GraphQL. The array avoids this entirely: if a directive wasn't in the source, it simply isn't in the array. It also preserves the exact position of preamble comments.
-
-### Typed start / end conditions
-
-Instead of raw strings, every task's `start` and `end` are discriminated union objects:
-
-```
-StartCondition = ImplicitStart | AbsoluteDate | TimeOfDay | ConstraintRef(FS)
-EndCondition   = ImplicitEnd   | AbsoluteDate | TimeOfDay | RelativeDuration | ConstraintRef(SF)
-```
-
-`ConstraintRef` encodes `after` (Finish-to-Start) and `until` (Start-to-Finish) dependencies with full support for multiple task IDs.
-
-### GanttElementType separate from GanttTaskStatus
-
-`element_type` (TASK / MILESTONE / VERT) describes *what the element is*. `statuses` (DONE / ACTIVE / CRIT) describe *its work state*.
-
-### ISO 8601 in the AST
-
-Dates are stored as ISO 8601 strings (`2024-01-01`, `17:49:00`) and durations as ISO 8601 duration strings (`P30D`, `PT24H`). Conversion to/from Mermaid's own formats (`30d`, `24h`, `HH:mm`) happens at the parser/renderer boundary.
-
-### Comments as first-class AST nodes
-
-`Comment` objects appear directly inside `header` and `elements` arrays, preserving their position in the source. No raw-input preservation is needed for round-tripping.
-
-### Pure data model
-
-`diagram_models` classes are plain Python dataclasses with no methods. The `kind` field (e.g. `"GANTT_TASK"`) is set automatically and never needs to be passed by the caller.
+- **JSON and .gan pipelines are Gantt-only.** Other diagram types (flowchart, sequence, pie, timeline) support Mermaid read/write only.
+- **Mermaid has no lag/lead syntax.** Gantt dependency lag (`ConstraintRef.lag`) is preserved through the JSON and `.gan` pipelines but is silently dropped when rendering to Mermaid.
+- **Mermaid cannot express both a duration and an end constraint on the same task.** When a task has both (possible after a `.gan` import), the Mermaid renderer emits the duration only; the constraint is preserved in JSON and `.gan`.
+- **`test_pie_chart_2.mmd`** — known pre-existing round-trip failure.
+- **`test_timeline_7.mmd`, `test_timeline_8.mmd`** — whitespace normalization differences expected (continuation lines folded, indentation standardized).

@@ -30,10 +30,10 @@
               "value": "2014-01-01"
             },
             "end": {
-              "kind": "RELATIVE_DURATION",
-              "value": "P30D"
+              "kind": "IMPLICIT_END"
             },
-            "id": "a1"
+            "id": "a1",
+            "duration": "P30D"
           },
           {
             "kind": "GANTT_TASK",
@@ -49,9 +49,9 @@
               "combination": "ALL_OF"
             },
             "end": {
-              "kind": "RELATIVE_DURATION",
-              "value": "P20D"
-            }
+              "kind": "IMPLICIT_END"
+            },
+            "duration": "P20D"
           }
         ]
       },
@@ -69,9 +69,9 @@
               "value": "2014-01-12"
             },
             "end": {
-              "kind": "RELATIVE_DURATION",
-              "value": "P12D"
-            }
+              "kind": "IMPLICIT_END"
+            },
+            "duration": "P12D"
           },
           {
             "kind": "GANTT_TASK",
@@ -82,9 +82,9 @@
               "kind": "IMPLICIT_START"
             },
             "end": {
-              "kind": "RELATIVE_DURATION",
-              "value": "P24D"
-            }
+              "kind": "IMPLICIT_END"
+            },
+            "duration": "P24D"
           }
         ]
       }

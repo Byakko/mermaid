@@ -13,7 +13,6 @@ from diagram_models.common import (
     DependencyType,
     ImplicitEnd,
     ImplicitStart,
-    RelativeDuration,
     TimeOfDay,
 )
 from diagram_models.gantt import (
@@ -42,6 +41,7 @@ def _parse_start(data: dict):
             task_ids=data["task_ids"],
             dependency_type=DependencyType(data["dependency_type"]),
             combination=DependencyCombination(data["combination"]),
+            lag=data.get("lag"),
         )
     raise ValueError(f"Unknown start kind: {kind!r}")
 
@@ -56,13 +56,12 @@ def _parse_end(data: dict):
         return AbsoluteDateTime(data["value"])
     if kind == "TIME_OF_DAY":
         return TimeOfDay(data["value"])
-    if kind == "RELATIVE_DURATION":
-        return RelativeDuration(data["value"])
     if kind == "CONSTRAINT_REF":
         return ConstraintRef(
             task_ids=data["task_ids"],
             dependency_type=DependencyType(data["dependency_type"]),
             combination=DependencyCombination(data["combination"]),
+            lag=data.get("lag"),
         )
     raise ValueError(f"Unknown end kind: {kind!r}")
 
@@ -76,6 +75,9 @@ def _parse_task(data: dict) -> GanttTask:
         statuses=[GanttTaskStatus(s) for s in data.get("statuses", [])],
         id=data.get("id"),
         trailing_comment=data.get("trailing_comment"),
+        duration=data.get("duration"),
+        percent_complete=data.get("percent_complete"),
+        uid=data.get("uid"),
     )
 
 

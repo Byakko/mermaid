@@ -20,6 +20,17 @@ from .common import Comment, EndCondition, StartCondition
 # Enums
 # ─────────────────────────────────────────────────────────────────────────────
 
+class DayOfWeek(Enum):
+    """A day of the week."""
+    MON = "MON"
+    TUE = "TUE"
+    WED = "WED"
+    THU = "THU"
+    FRI = "FRI"
+    SAT = "SAT"
+    SUN = "SUN"
+
+
 class GanttDirectiveName(Enum):
     """Names of the directives that can appear in a Gantt preamble."""
     TITLE         = "TITLE"
@@ -86,6 +97,9 @@ class GanttTask:
     statuses: list[GanttTaskStatus] = field(default_factory=list)
     id: Optional[str] = None
     trailing_comment: Optional[str] = None
+    duration: Optional[str] = None
+    percent_complete: Optional[int] = None
+    uid: Optional[str] = None
     kind: str = field(default="GANTT_TASK", init=False)
 
 
@@ -111,6 +125,25 @@ class GanttSection:
 # ─────────────────────────────────────────────────────────────────────────────
 
 GanttTopLevelElement = Union[GanttSection, GanttTask, Comment]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Source format metadata
+# ─────────────────────────────────────────────────────────────────────────────
+
+@dataclass
+class GanttProjectMetadata:
+    """
+    Application-level metadata from a GanttProject .gan file.
+
+    Preserved so that a .gan file can be faithfully reconstructed on export.
+    working_days is required for correct duration and lag calculations.
+    """
+    name: Optional[str] = None
+    locale: Optional[str] = None
+    version: Optional[str] = None
+    working_days: list[DayOfWeek] = field(default_factory=list)
+    kind: str = field(default="GANTT_PROJECT_METADATA", init=False)
 
 
 @dataclass

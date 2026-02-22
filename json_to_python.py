@@ -7,7 +7,7 @@ import sys
 from typing import Optional
 
 from diagram_models import Document
-from diagram_models.gantt import GanttDiagram
+from diagram_models.gantt import DayOfWeek, GanttDiagram, GanttProjectMetadata
 
 from json_to_python_converters.jtp_gantt import parse_gantt
 
@@ -45,10 +45,20 @@ def json_to_python(text: str) -> Optional[Document]:
 
     try:
         diagram = parser(diagram_data)
+        ganttproject = None
+        gp_data = data.get("ganttproject")
+        if gp_data is not None:
+            ganttproject = GanttProjectMetadata(
+                name=gp_data.get("name"),
+                locale=gp_data.get("locale"),
+                version=gp_data.get("version"),
+                working_days=[DayOfWeek(d) for d in gp_data.get("working_days", [])],
+            )
         return Document(
             diagram=diagram,
             version=data.get("version"),
             frontmatter=data.get("frontmatter"),
+            ganttproject=ganttproject,
         )
     except Exception as e:
         print(f"Warning: Error parsing {kind} diagram: {e}", file=sys.stderr)

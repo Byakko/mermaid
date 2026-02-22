@@ -1,0 +1,108 @@
+{
+  "version": "1.0",
+  "frontmatter": null,
+  "diagram": {
+    "kind": "GANTT_DIAGRAM",
+    "header": [
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "TITLE",
+        "value": "Untitled Gantt Project"
+      }
+    ],
+    "elements": [
+      {
+        "kind": "GANTT_TASK",
+        "name": "task_0",
+        "element_type": "TASK",
+        "statuses": [],
+        "start": {
+          "kind": "ABSOLUTE_DATE",
+          "value": "2026-02-26"
+        },
+        "end": {
+          "kind": "IMPLICIT_END"
+        },
+        "id": "0",
+        "duration": "P5D",
+        "percent_complete": 0,
+        "uid": "089beaad29564bdcacc74599d1152e21"
+      },
+      {
+        "kind": "GANTT_TASK",
+        "name": "task_1",
+        "element_type": "TASK",
+        "statuses": [],
+        "start": {
+          "kind": "CONSTRAINT_REF",
+          "task_ids": [
+            "0",
+            "2"
+          ],
+          "dependency_type": "FS",
+          "combination": "ALL_OF"
+        },
+        "end": {
+          "kind": "IMPLICIT_END"
+        },
+        "id": "1",
+        "duration": "P1D",
+        "percent_complete": 0,
+        "uid": "0f38bda5e62846e698a29aa21f2f2909"
+      },
+      {
+        "kind": "GANTT_TASK",
+        "name": "task_2",
+        "element_type": "TASK",
+        "statuses": [],
+        "start": {
+          "kind": "ABSOLUTE_DATE",
+          "value": "2026-02-24"
+        },
+        "end": {
+          "kind": "IMPLICIT_END"
+        },
+        "id": "2",
+        "duration": "P6D",
+        "percent_complete": 0,
+        "uid": "b61756c113c14fe9913a92d13458de8b"
+      },
+      {
+        "kind": "GANTT_TASK",
+        "name": "task_3",
+        "element_type": "TASK",
+        "statuses": [],
+        "start": {
+          "kind": "ABSOLUTE_DATE",
+          "value": "2026-02-19"
+        },
+        "end": {
+          "kind": "CONSTRAINT_REF",
+          "task_ids": [
+            "2"
+          ],
+          "dependency_type": "SF",
+          "combination": "ALL_OF",
+          "lag": "-P1D"
+        },
+        "id": "3",
+        "duration": "P2D",
+        "percent_complete": 0,
+        "uid": "6209acc69fa5495280c8342e6ae8d5cf"
+      }
+    ]
+  },
+  "ganttproject": {
+    "kind": "GANTT_PROJECT_METADATA",
+    "name": "Untitled Gantt Project",
+    "locale": "en",
+    "version": "3.3.3322",
+    "working_days": [
+      "MON",
+      "TUE",
+      "WED",
+      "THU",
+      "FRI"
+    ]
+  }
+}

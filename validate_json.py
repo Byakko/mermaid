@@ -44,6 +44,16 @@ class DependencyCombination(str, Enum):
     ANY_OF = "ANY_OF"
 
 
+class DayOfWeek(str, Enum):
+    MON = "MON"
+    TUE = "TUE"
+    WED = "WED"
+    THU = "THU"
+    FRI = "FRI"
+    SAT = "SAT"
+    SUN = "SUN"
+
+
 class GanttDirectiveName(str, Enum):
     TITLE         = "TITLE"
     DATE_FORMAT   = "DATE_FORMAT"
@@ -99,6 +109,11 @@ _ISO_DUR = re.compile(
     r"^P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?!$)(\d+H)?(\d+M)?(\d+S)?)?$"
 )
 
+# Lag may carry a leading '-' to represent lead time (overlap).
+_ISO_DUR_SIGNED = re.compile(
+    r"^-?P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?!$)(\d+H)?(\d+M)?(\d+S)?)?$"
+)
+
 
 class RelativeDuration(BaseModel):
     kind:  Literal["RELATIVE_DURATION"]
@@ -133,12 +148,20 @@ class ConstraintRef(BaseModel):
     task_ids:        list[str]
     dependency_type: DependencyType
     combination:     DependencyCombination
+    lag:             Optional[str] = None
 
     @model_validator(mode="after")
     def task_ids_non_empty(self) -> ConstraintRef:
         if not self.task_ids:
             raise ValueError("task_ids must not be empty")
         return self
+
+    @field_validator("lag")
+    @classmethod
+    def validate_lag(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _ISO_DUR_SIGNED.match(v):
+            raise ValueError(f"lag must be a signed ISO 8601 duration, got {v!r}")
+        return v
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -151,7 +174,7 @@ StartCondition = Annotated[
 ]
 
 EndCondition = Annotated[
-    Union[ImplicitEnd, AbsoluteDate, AbsoluteDateTime, TimeOfDay, RelativeDuration, ConstraintRef],
+    Union[ImplicitEnd, AbsoluteDate, AbsoluteDateTime, TimeOfDay, ConstraintRef],
     Field(discriminator="kind"),
 ]
 
@@ -185,6 +208,16 @@ class GanttTask(BaseModel):
     end:              EndCondition
     id:               Optional[str] = None
     trailing_comment: Optional[str] = None
+    duration:         Optional[str] = None
+    percent_complete: Optional[int] = None
+    uid:              Optional[str] = None
+
+    @field_validator("duration")
+    @classmethod
+    def validate_duration(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _ISO_DUR.match(v):
+            raise ValueError(f"Not a valid ISO 8601 duration: {v!r}")
+        return v
 
 
 GanttSectionElement = Annotated[
@@ -224,10 +257,19 @@ class GanttDiagram(BaseModel):
 # Extend diagram union here as new diagram types are implemented.
 # ─────────────────────────────────────────────────────────────────────────────
 
+class GanttProjectMetadata(BaseModel):
+    kind:         Literal["GANTT_PROJECT_METADATA"]
+    name:         Optional[str] = None
+    locale:       Optional[str] = None
+    version:      Optional[str] = None
+    working_days: list[DayOfWeek] = []
+
+
 class Document(BaseModel):
-    version:     Optional[str] = None
-    frontmatter: Optional[str] = None
-    diagram:     GanttDiagram  # Union[GanttDiagram, ...] when more types exist
+    version:      Optional[str] = None
+    frontmatter:  Optional[str] = None
+    diagram:      GanttDiagram  # Union[GanttDiagram, ...] when more types exist
+    ganttproject: Optional[GanttProjectMetadata] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

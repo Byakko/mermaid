@@ -18,7 +18,6 @@ from diagram_models.common import (
     DependencyType,
     ImplicitEnd,
     ImplicitStart,
-    RelativeDuration,
     TimeOfDay,
 )
 from diagram_models.gantt import (
@@ -212,6 +211,8 @@ def _parse_task_line(
         iso = _mermaid_date_to_iso(raw_start[1], strptime_fmt, is_time)
         start = TimeOfDay(iso) if is_time else AbsoluteDate(iso)
 
+    duration = _mermaid_dur_to_iso(raw_dur) if raw_dur is not None else None
+
     if raw_end is not None and raw_end[0] == "until":
         end = ConstraintRef(
             task_ids=raw_end[1],
@@ -221,8 +222,6 @@ def _parse_task_line(
     elif raw_end is not None:  # date end
         iso = _mermaid_date_to_iso(raw_end[1], strptime_fmt, is_time)
         end = TimeOfDay(iso) if is_time else AbsoluteDate(iso)
-    elif raw_dur is not None:
-        end = RelativeDuration(_mermaid_dur_to_iso(raw_dur))
     else:
         end = ImplicitEnd()
 
@@ -231,6 +230,7 @@ def _parse_task_line(
         element_type=element_type,
         statuses=statuses,
         start=start,
+        duration=duration,
         end=end,
         id=task_id,
     )
