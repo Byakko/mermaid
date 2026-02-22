@@ -3,30 +3,35 @@
   "frontmatter": null,
   "diagram": {
     "kind": "GANTT_DIAGRAM",
-    "id": null,
-    "trailing_comment": null,
-    "title": "A Gantt Diagram Excluding Fri - Sat weekends",
-    "date_format": "YYYY-MM-DD",
-    "axis_format": null,
-    "excludes": [
+    "header": [
       {
-        "kind": "EXCLUDE_ENTRY",
-        "type": "WEEKENDS",
-        "value": null
+        "kind": "GANTT_DIRECTIVE",
+        "name": "TITLE",
+        "value": "A Gantt Diagram Excluding Fri - Sat weekends"
+      },
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "DATE_FORMAT",
+        "value": "YYYY-MM-DD"
+      },
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "EXCLUDES",
+        "value": "weekends"
+      },
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "WEEKEND",
+        "value": "friday"
       }
     ],
-    "weekend": "FRIDAY",
     "elements": [
       {
         "kind": "GANTT_SECTION",
-        "id": null,
-        "trailing_comment": null,
         "name": "Section",
         "elements": [
           {
             "kind": "GANTT_TASK",
-            "id": "a1",
-            "trailing_comment": null,
             "name": "A task",
             "element_type": "TASK",
             "statuses": [],
@@ -37,12 +42,11 @@
             "end": {
               "kind": "RELATIVE_DURATION",
               "value": "P30D"
-            }
+            },
+            "id": "a1"
           },
           {
             "kind": "GANTT_TASK",
-            "id": null,
-            "trailing_comment": null,
             "name": "Another task",
             "element_type": "TASK",
             "statuses": [],

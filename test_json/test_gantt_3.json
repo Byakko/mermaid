@@ -3,18 +3,10 @@
   "frontmatter": null,
   "diagram": {
     "kind": "GANTT_DIAGRAM",
-    "id": null,
-    "trailing_comment": null,
-    "title": null,
-    "date_format": null,
-    "axis_format": null,
-    "excludes": null,
-    "weekend": null,
+    "header": [],
     "elements": [
       {
         "kind": "GANTT_TASK",
-        "id": "a",
-        "trailing_comment": null,
         "name": "apple",
         "element_type": "TASK",
         "statuses": [],
@@ -25,12 +17,11 @@
         "end": {
           "kind": "RELATIVE_DURATION",
           "value": "P1W"
-        }
+        },
+        "id": "a"
       },
       {
         "kind": "GANTT_TASK",
-        "id": "b",
-        "trailing_comment": null,
         "name": "banana",
         "element_type": "TASK",
         "statuses": [
@@ -43,12 +34,11 @@
         "end": {
           "kind": "RELATIVE_DURATION",
           "value": "P1D"
-        }
+        },
+        "id": "b"
       },
       {
         "kind": "GANTT_TASK",
-        "id": "c",
-        "trailing_comment": null,
         "name": "cherry",
         "element_type": "TASK",
         "statuses": [
@@ -66,12 +56,11 @@
         "end": {
           "kind": "RELATIVE_DURATION",
           "value": "P1D"
-        }
+        },
+        "id": "c"
       },
       {
         "kind": "GANTT_TASK",
-        "id": "d",
-        "trailing_comment": null,
         "name": "kiwi",
         "element_type": "TASK",
         "statuses": [],
@@ -87,7 +76,8 @@
           ],
           "dependency_type": "SF",
           "combination": "ALL_OF"
-        }
+        },
+        "id": "d"
       }
     ]
   }

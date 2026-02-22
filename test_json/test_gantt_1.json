@@ -3,24 +3,25 @@
   "frontmatter": null,
   "diagram": {
     "kind": "GANTT_DIAGRAM",
-    "id": null,
-    "trailing_comment": null,
-    "title": "A Gantt Diagram",
-    "date_format": "YYYY-MM-DD",
-    "axis_format": null,
-    "excludes": null,
-    "weekend": null,
+    "header": [
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "TITLE",
+        "value": "A Gantt Diagram"
+      },
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "DATE_FORMAT",
+        "value": "YYYY-MM-DD"
+      }
+    ],
     "elements": [
       {
         "kind": "GANTT_SECTION",
-        "id": null,
-        "trailing_comment": null,
         "name": "Section",
         "elements": [
           {
             "kind": "GANTT_TASK",
-            "id": "a1",
-            "trailing_comment": null,
             "name": "A task",
             "element_type": "TASK",
             "statuses": [],
@@ -31,12 +32,11 @@
             "end": {
               "kind": "RELATIVE_DURATION",
               "value": "P30D"
-            }
+            },
+            "id": "a1"
           },
           {
             "kind": "GANTT_TASK",
-            "id": null,
-            "trailing_comment": null,
             "name": "Another task",
             "element_type": "TASK",
             "statuses": [],
@@ -57,14 +57,10 @@
       },
       {
         "kind": "GANTT_SECTION",
-        "id": null,
-        "trailing_comment": null,
         "name": "Another",
         "elements": [
           {
             "kind": "GANTT_TASK",
-            "id": null,
-            "trailing_comment": null,
             "name": "Task in Another",
             "element_type": "TASK",
             "statuses": [],
@@ -79,8 +75,6 @@
           },
           {
             "kind": "GANTT_TASK",
-            "id": null,
-            "trailing_comment": null,
             "name": "another task",
             "element_type": "TASK",
             "statuses": [],

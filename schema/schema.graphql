@@ -82,7 +82,7 @@ enum ElementKind {
   GANTT_TASK
 
   # ── Gantt config value types ──────────────────────
-  EXCLUDE_ENTRY
+  GANTT_DIRECTIVE
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -262,20 +262,42 @@ union EndCondition =
 """
 A complete Gantt chart.
 
-Elements may be sections (which group tasks), sectionless tasks, or
-stand-alone comments.  The order of elements is significant.
+header holds the ordered sequence of directives and comments from the
+preamble (everything before the first section or task).  Order is
+significant and is preserved for faithful round-tripping.
+
+elements holds the body: sections, sectionless tasks, and stand-alone
+comments that appear after the preamble.
 """
 type GanttDiagram implements DiagramElement & ASTNode {
   kind:             ElementKind!          # always GANTT_DIAGRAM
   id:               ID
   trailing_comment: String
-  title:            String
-  date_format:      String                # raw dateFormat value (day.js tokens)
-  axis_format:      String                # raw axisFormat value (strftime tokens)
-  tick_interval:    String                # raw tickInterval value (e.g. "1day", "1week", "1month")
-  excludes:         [ExcludeEntry!]
-  weekend:          WeekendDay
+  header:           [GanttHeaderElement!]!
   elements:         [GanttTopLevelElement!]!
+}
+
+"""Ordered preamble entries: directives and comments."""
+union GanttHeaderElement = GanttDirective | Comment
+
+"""
+A single directive from the Gantt preamble (title, dateFormat, etc.).
+value is always a raw string — the renderer is responsible for any
+further parsing (e.g. splitting excludes tokens).
+"""
+type GanttDirective implements ASTNode {
+  kind:  ElementKind!          # always GANTT_DIRECTIVE
+  name:  GanttDirectiveName!
+  value: String!
+}
+
+enum GanttDirectiveName {
+  TITLE
+  DATE_FORMAT
+  AXIS_FORMAT
+  TICK_INTERVAL
+  EXCLUDES
+  WEEKEND
 }
 
 """
@@ -343,34 +365,3 @@ enum GanttTaskStatus {
   CRIT    # on the critical path; rendered with urgency styling
 }
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Gantt excludes
-# ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-One token from the space-separated excludes directive.
-Example:  excludes weekends monday 2024-12-25
-  → [{WEEKENDS}, {DAY_NAME, "monday"}, {DATE, "2024-12-25"}]
-"""
-type ExcludeEntry implements ASTNode {
-  kind:  ElementKind!  # always EXCLUDE_ENTRY
-  type:  ExcludeKind!
-  value: String        # null for WEEKENDS; date string or day name otherwise
-}
-
-enum ExcludeKind {
-  WEEKENDS  # the literal keyword "weekends"
-  DATE      # a specific date matching the diagram's dateFormat
-  DAY_NAME  # a weekday name, e.g. "monday"
-}
-
-"""Override which days are treated as the weekend."""
-enum WeekendDay {
-  SUNDAY
-  MONDAY
-  TUESDAY
-  WEDNESDAY
-  THURSDAY
-  FRIDAY
-  SATURDAY
-}

@@ -3,14 +3,28 @@
   "frontmatter": null,
   "diagram": {
     "kind": "GANTT_DIAGRAM",
-    "id": null,
-    "trailing_comment": null,
-    "title": "Timeline - Gantt Sampler",
-    "date_format": "YYYY",
-    "axis_format": "%y",
-    "tick_interval": "1month",
-    "excludes": null,
-    "weekend": null,
+    "header": [
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "TITLE",
+        "value": "Timeline - Gantt Sampler"
+      },
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "DATE_FORMAT",
+        "value": "YYYY"
+      },
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "AXIS_FORMAT",
+        "value": "%y"
+      },
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "TICK_INTERVAL",
+        "value": "1month"
+      }
+    ],
     "elements": []
   }
 }

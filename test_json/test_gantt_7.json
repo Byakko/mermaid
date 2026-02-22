@@ -3,49 +3,67 @@
   "frontmatter": "displayMode: compact",
   "diagram": {
     "kind": "GANTT_DIAGRAM",
-    "id": null,
-    "trailing_comment": null,
-    "title": "A Gantt Diagram",
-    "date_format": "YYYY-MM-DD",
-    "axis_format": null,
-    "excludes": null,
-    "weekend": null,
+    "header": [
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "TITLE",
+        "value": "A Gantt Diagram"
+      },
+      {
+        "kind": "GANTT_DIRECTIVE",
+        "name": "DATE_FORMAT",
+        "value": "YYYY-MM-DD"
+      }
+    ],
     "elements": [
       {
         "kind": "GANTT_SECTION",
-        "id": null,
-        "trailing_comment": null,
         "name": "Section",
         "elements": [
           {
             "kind": "GANTT_TASK",
-            "id": "a1",
-            "trailing_comment": null,
             "name": "A task",
             "element_type": "TASK",
             "statuses": [],
-            "start": { "kind": "ABSOLUTE_DATE", "value": "2014-01-01" },
-            "end":   { "kind": "RELATIVE_DURATION", "value": "P30D" }
+            "start": {
+              "kind": "ABSOLUTE_DATE",
+              "value": "2014-01-01"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P30D"
+            },
+            "id": "a1"
           },
           {
             "kind": "GANTT_TASK",
-            "id": "a2",
-            "trailing_comment": null,
             "name": "Another task",
             "element_type": "TASK",
             "statuses": [],
-            "start": { "kind": "ABSOLUTE_DATE", "value": "2014-01-20" },
-            "end":   { "kind": "RELATIVE_DURATION", "value": "P25D" }
+            "start": {
+              "kind": "ABSOLUTE_DATE",
+              "value": "2014-01-20"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P25D"
+            },
+            "id": "a2"
           },
           {
             "kind": "GANTT_TASK",
-            "id": "a3",
-            "trailing_comment": null,
             "name": "Another one",
             "element_type": "TASK",
             "statuses": [],
-            "start": { "kind": "ABSOLUTE_DATE", "value": "2014-02-10" },
-            "end":   { "kind": "RELATIVE_DURATION", "value": "P20D" }
+            "start": {
+              "kind": "ABSOLUTE_DATE",
+              "value": "2014-02-10"
+            },
+            "end": {
+              "kind": "RELATIVE_DURATION",
+              "value": "P20D"
+            },
+            "id": "a3"
           }
         ]
       }
